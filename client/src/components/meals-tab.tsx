@@ -396,26 +396,59 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
           mealCounts.set(p.mealId!, (mealCounts.get(p.mealId!) || 0) + 1);
         });
 
-        const parseAmount = (amt: string): { num: number; unit: string } | null => {
-          const match = amt.trim().match(/^([\d./]+)\s*(.*)/);
-          if (!match) return null;
-          let num = 0;
-          if (match[1].includes("/")) {
-            const parts = match[1].split("/");
-            num = parseFloat(parts[0]) / parseFloat(parts[1]);
-          } else {
-            num = parseFloat(match[1]);
+        const parseFraction = (s: string): number => {
+          if (s.includes("/")) {
+            const [n, d] = s.split("/");
+            return parseFloat(n) / parseFloat(d);
           }
-          if (isNaN(num)) return null;
-          return { num, unit: match[2].trim().toLowerCase() };
+          return parseFloat(s);
+        };
+
+        const parseAmount = (amt: string): { num: number; unit: string } | null => {
+          const trimmed = amt.trim();
+          const mixedMatch = trimmed.match(/^(\d+)\s+(\d+\/\d+)\s*(.*)/);
+          if (mixedMatch) {
+            const num = parseFloat(mixedMatch[1]) + parseFraction(mixedMatch[2]);
+            if (!isNaN(num)) return { num, unit: mixedMatch[3].trim().toLowerCase() };
+          }
+          const simpleMatch = trimmed.match(/^([\d./]+)\s*(.*)/);
+          if (simpleMatch) {
+            const num = parseFraction(simpleMatch[1]);
+            if (!isNaN(num)) return { num, unit: simpleMatch[2].trim().toLowerCase() };
+          }
+          return null;
+        };
+
+        const normalizeUnit = (u: string): string => {
+          const s = u.toLowerCase().replace(/\.$/, "");
+          const map: Record<string, string> = {
+            cup: "cups", c: "cups",
+            tbsp: "tbsp", tablespoon: "tbsp", tablespoons: "tbsp",
+            tsp: "tsp", teaspoon: "tsp", teaspoons: "tsp",
+            oz: "oz", ounce: "oz", ounces: "oz",
+            lb: "lbs", lbs: "lbs", pound: "lbs", pounds: "lbs",
+            g: "g", gram: "g", grams: "g",
+            kg: "kg", kilogram: "kg", kilograms: "kg",
+            ml: "ml", milliliter: "ml", milliliters: "ml", millilitres: "ml",
+            l: "l", liter: "l", liters: "l", litres: "l", litre: "l",
+            clove: "cloves", cloves: "cloves",
+            slice: "slices", slices: "slices",
+            piece: "pieces", pieces: "pieces",
+            can: "cans", cans: "cans",
+            bunch: "bunches", bunches: "bunches",
+            sprig: "sprigs", sprigs: "sprigs",
+            pinch: "pinches", pinches: "pinches",
+            dash: "dashes", dashes: "dashes",
+            handful: "handfuls", handfuls: "handfuls",
+            large: "large", medium: "medium", small: "small",
+          };
+          return map[s] || s;
         };
 
         const ingredientMap = new Map<string, Map<string, number>>();
-        const uniqueMeals = Array.from(new Set(mealPlans.filter(p => p.mealId).map(p => p.mealId!)));
-        uniqueMeals.forEach(mealId => {
-          const meal = meals.find(m => m.id === mealId);
+        mealPlans.filter(p => p.mealId).forEach(plan => {
+          const meal = meals.find(m => m.id === plan.mealId);
           if (!meal?.ingredients) return;
-          const count = mealCounts.get(mealId) || 1;
           try {
             const parsed: Ingredient[] = JSON.parse(meal.ingredients);
             parsed.forEach(ing => {
@@ -423,14 +456,15 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
               const key = cleaned.toLowerCase().trim();
               if (!key) return;
               const unitMap = ingredientMap.get(key) || new Map<string, number>();
-              const parsed2 = parseAmount(ing.amount);
-              if (parsed2) {
-                const existing = unitMap.get(parsed2.unit) || 0;
-                unitMap.set(parsed2.unit, existing + parsed2.num * count);
+              const p = parseAmount(ing.amount);
+              if (p) {
+                const unit = normalizeUnit(p.unit);
+                const existing = unitMap.get(unit) || 0;
+                unitMap.set(unit, existing + p.num);
               } else {
                 const raw = ing.amount.trim().toLowerCase() || "as needed";
                 const existing = unitMap.get(raw) || 0;
-                unitMap.set(raw, existing + count);
+                unitMap.set(raw, existing + 1);
               }
               ingredientMap.set(key, unitMap);
             });

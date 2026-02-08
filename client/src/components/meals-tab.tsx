@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import type { Meal, MealPlan } from "@shared/schema";
+import { AiMealGenerator } from "./ai-meal-generator";
 
 const mealIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Salad, Fish, Soup, Cookie, Egg, Sandwich, Utensils, ChefHat,
@@ -56,8 +57,10 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, i
   };
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="space-y-8">
+      <AiMealGenerator />
+
+      <div className="border-t pt-8">
         <h2 className="text-xl sm:text-2xl font-bold text-foreground" data-testid="text-meals-title">Meal Planning & Recipes</h2>
         <p className="text-sm text-muted-foreground mt-1">Delicious, healthy meals to cook together</p>
       </div>

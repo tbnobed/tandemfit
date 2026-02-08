@@ -8,30 +8,34 @@ A couples fitness tracking app for Obed and Kristina with shared progress tracki
 - **Backend**: Express.js REST API
 - **Database**: PostgreSQL via Drizzle ORM
 - **State Management**: TanStack React Query
-- **AI**: OpenAI API (gpt-5-mini) for personalized workout plan generation
+- **AI**: OpenAI API (gpt-5-mini) for personalized workout plans and AI recipe generation
 
 ## Key Features
 1. **Dashboard** - Real-time progress tracking for both partners (weekly workouts, calories burned), motivation feed, active challenges preview
 2. **Activities** - AI workout generator with metabolic profiles, workout suggestions (together/individual), filter by type, log workouts for either partner
-3. **Meals** - Recipe discovery with tags, weekly meal planner with day-by-day tracking
+3. **Meals** - AI recipe generator (cuisine, portions, calories, dietary restrictions), recipe discovery with tags, weekly meal planner with day-by-day tracking
 4. **Challenges** - Couple challenges with progress bars, badge collection, reward system
 5. **AI Workout Generator** - Personalized workout plans based on partner metabolic profiles (age, height, weight, fitness level, goal), with exercise details (sets, reps, rest, form tips)
 
 ## Project Structure
-- `shared/schema.ts` - All Drizzle schemas and TypeScript types (partners, workoutLogs, activities, meals, mealPlans, challenges, badges, motivationMessages, aiWorkoutPlans)
+- `shared/schema.ts` - All Drizzle schemas and TypeScript types (partners, workoutLogs, activities, meals, mealPlans, challenges, badges, motivationMessages, aiWorkoutPlans, aiMealPlans)
 - `server/routes.ts` - REST API endpoints including OpenAI integration
 - `server/storage.ts` - Database storage layer (PostgreSQL)
 - `server/seed.ts` - Initial seed data with metabolic profiles
 - `client/src/pages/home.tsx` - Main page with tab navigation
-- `client/src/components/` - All UI components (header, tabs, dashboard, activities, meals, challenges, ai-workout-generator)
+- `client/src/components/` - All UI components (header, tabs, dashboard, activities, meals, challenges, ai-workout-generator, ai-meal-generator)
 
 ## API Endpoints
 - GET/POST `/api/partners`, `/api/activities`, `/api/meals`, `/api/challenges`, `/api/badges`, `/api/messages`, `/api/workout-logs`, `/api/meal-plans`
 - PATCH `/api/partners/:id`, `/api/challenges/:id`, `/api/meal-plans/:id`
 - GET `/api/ai-workout-plans/:partnerId` - Past AI plans for a partner
 - POST `/api/ai-workout-plans/generate` - Generate AI workout plan (body: { partnerId, focusArea })
+- GET `/api/ai-meal-plans` - All saved AI-generated recipes
+- POST `/api/ai-meal-plans/generate` - Generate AI recipe (body: { cuisine, portions, calorieRange, dietaryRestrictions })
+- DELETE `/api/ai-meal-plans/:id` - Delete a saved AI recipe
 
 ## Recent Changes
+- 2026-02-08: Added AI meal/recipe generator with OpenAI integration, cuisine/portions/calories/dietary restrictions, ingredient lists and step-by-step instructions
 - 2026-02-08: Added AI workout generator with OpenAI integration, metabolic profiles for partners, exercise plan generation with reps/sets/form tips
 - 2026-02-08: Initial build with all MVP features, PostgreSQL database, seed data
 

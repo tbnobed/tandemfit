@@ -255,7 +255,7 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
           )}
 
           <Button
-            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0"
+            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0"
             onClick={handleGenerate}
             disabled={!selectedPartnerId || !selectedFocus || generateMutation.isPending}
             data-testid="button-generate-workout"

@@ -405,5 +405,102 @@ Respond with JSON in this exact format:
     }
   });
 
+  app.get("/api/ai-meal-plans", async (_req, res) => {
+    try {
+      const plans = await storage.getAiMealPlans();
+      res.json(plans);
+    } catch (e) {
+      res.status(500).json({ error: "Failed to fetch AI meal plans" });
+    }
+  });
+
+  app.delete("/api/ai-meal-plans/:id", async (req, res) => {
+    try {
+      await storage.deleteAiMealPlan(req.params.id);
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to delete AI meal plan" });
+    }
+  });
+
+  const generateMealSchema = z.object({
+    cuisine: z.string().min(1),
+    portions: z.number().int().min(1).max(10),
+    calorieRange: z.string().min(1),
+    dietaryRestrictions: z.array(z.string()).optional().default([]),
+  });
+
+  app.post("/api/ai-meal-plans/generate", async (req, res) => {
+    try {
+      const { cuisine, portions, calorieRange, dietaryRestrictions } = generateMealSchema.parse(req.body);
+
+      const restrictionsStr = dietaryRestrictions && dietaryRestrictions.length > 0
+        ? `Dietary Restrictions: ${dietaryRestrictions.join(", ")}`
+        : "No dietary restrictions";
+
+      const prompt = `You are a professional chef and nutritionist. Create a recipe that meets these requirements:
+
+Cuisine Type: ${cuisine}
+Number of Portions: ${portions}
+Calorie Range Per Serving: ${calorieRange}
+${restrictionsStr}
+
+Generate a complete recipe with a full list of ingredients (with precise measurements) and detailed step-by-step cooking instructions.
+
+Respond with JSON in this exact format:
+{
+  "recipeName": "descriptive recipe name",
+  "prepTime": "preparation time like 15 min",
+  "cookTime": "cooking time like 30 min",
+  "totalCalories": total calories for entire recipe as number,
+  "caloriesPerServing": calories per single serving as number,
+  "difficulty": "Easy" or "Medium" or "Hard",
+  "ingredients": [
+    {
+      "item": "ingredient name",
+      "amount": "quantity with unit like 2 cups or 1 tbsp"
+    }
+  ],
+  "steps": [
+    "Step 1 description with detailed instructions",
+    "Step 2 description with detailed instructions"
+  ]
+}`;
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 45000);
+      try {
+        var response = await openai.chat.completions.create({
+          model: "gpt-5-mini",
+          messages: [{ role: "user", content: prompt }],
+          response_format: { type: "json_object" },
+        }, { signal: controller.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      const result = JSON.parse(response.choices[0].message.content || "{}");
+
+      const saved = await storage.createAiMealPlan({
+        recipeName: result.recipeName || "Custom Recipe",
+        cuisine,
+        portions,
+        totalCalories: result.totalCalories || 0,
+        caloriesPerServing: result.caloriesPerServing || 0,
+        dietaryRestrictions: dietaryRestrictions || [],
+        prepTime: result.prepTime || "15 min",
+        cookTime: result.cookTime || "30 min",
+        difficulty: result.difficulty || "Medium",
+        ingredients: JSON.stringify(result.ingredients || []),
+        steps: JSON.stringify(result.steps || []),
+      });
+
+      res.json({ ...saved, ingredients: result.ingredients, steps: result.steps });
+    } catch (e: any) {
+      console.error("AI meal generation error:", e);
+      res.status(500).json({ error: "Failed to generate recipe. " + (e.message || "") });
+    }
+  });
+
   return httpServer;
 }

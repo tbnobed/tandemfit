@@ -86,6 +86,22 @@ export const badges = pgTable("badges", {
   weekNumber: integer("week_number").notNull().default(1),
 });
 
+export const aiMealPlans = pgTable("ai_meal_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  recipeName: text("recipe_name").notNull(),
+  cuisine: text("cuisine").notNull(),
+  portions: integer("portions").notNull().default(2),
+  totalCalories: integer("total_calories").notNull(),
+  caloriesPerServing: integer("calories_per_serving").notNull(),
+  dietaryRestrictions: text("dietary_restrictions").array().notNull().default(sql`'{}'::text[]`),
+  prepTime: text("prep_time").notNull(),
+  cookTime: text("cook_time").notNull(),
+  difficulty: text("difficulty").notNull().default("Medium"),
+  ingredients: text("ingredients").notNull(),
+  steps: text("steps").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const motivationMessages = pgTable("motivation_messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   message: text("message").notNull(),
@@ -101,6 +117,7 @@ export const insertMealSchema = createInsertSchema(meals).omit({ id: true });
 export const insertMealPlanSchema = createInsertSchema(mealPlans).omit({ id: true });
 export const insertChallengeSchema = createInsertSchema(challenges).omit({ id: true });
 export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true });
+export const insertAiMealPlanSchema = createInsertSchema(aiMealPlans).omit({ id: true });
 export const insertMotivationMessageSchema = createInsertSchema(motivationMessages).omit({ id: true });
 
 export type Partner = typeof partners.$inferSelect;
@@ -119,5 +136,7 @@ export type Challenge = typeof challenges.$inferSelect;
 export type InsertChallenge = z.infer<typeof insertChallengeSchema>;
 export type Badge = typeof badges.$inferSelect;
 export type InsertBadge = z.infer<typeof insertBadgeSchema>;
+export type AiMealPlan = typeof aiMealPlans.$inferSelect;
+export type InsertAiMealPlan = z.infer<typeof insertAiMealPlanSchema>;
 export type MotivationMessage = typeof motivationMessages.$inferSelect;
 export type InsertMotivationMessage = z.infer<typeof insertMotivationMessageSchema>;

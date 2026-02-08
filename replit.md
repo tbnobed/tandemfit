@@ -28,6 +28,8 @@ A couples fitness tracking app for Obed and Kristina with shared progress tracki
 ## API Endpoints
 - GET/POST `/api/partners`, `/api/activities`, `/api/meals`, `/api/challenges`, `/api/badges`, `/api/messages`, `/api/workout-logs`, `/api/meal-plans`
 - PATCH `/api/partners/:id`, `/api/challenges/:id`, `/api/meal-plans/:id`
+- DELETE `/api/meals/:id` - Delete a meal (cascades to meal plans)
+- DELETE `/api/meal-plans/:id` - Clear a day from the weekly planner
 - GET `/api/ai-workout-plans/:partnerId` - Past AI plans for a partner
 - POST `/api/ai-workout-plans/generate` - Generate AI workout plan (body: { partnerId, focusArea })
 - GET `/api/ai-meal-plans` - All saved AI-generated recipes
@@ -35,6 +37,7 @@ A couples fitness tracking app for Obed and Kristina with shared progress tracki
 - DELETE `/api/ai-meal-plans/:id` - Delete a saved AI recipe
 
 ## Recent Changes
+- 2026-02-08: Added ability to add AI recipes to meal collection, delete meals, and clear days from weekly planner
 - 2026-02-08: Added AI meal/recipe generator with OpenAI integration, cuisine/portions/calories/dietary restrictions, ingredient lists and step-by-step instructions
 - 2026-02-08: Added AI workout generator with OpenAI integration, metabolic profiles for partners, exercise plan generation with reps/sets/form tips
 - 2026-02-08: Initial build with all MVP features, PostgreSQL database, seed data

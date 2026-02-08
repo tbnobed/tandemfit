@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sparkles, Timer, Flame, ChevronRight, Loader2,
-  UtensilsCrossed, Users, Trash2, ChefHat, ShoppingBasket
+  UtensilsCrossed, Users, Trash2, ChefHat, ShoppingBasket, Plus
 } from "lucide-react";
 import type { AiMealPlan } from "@shared/schema";
 
@@ -110,6 +110,26 @@ export function AiMealGenerator() {
     },
     onError: () => {
       toast({ title: "Failed to delete recipe", variant: "destructive" });
+    },
+  });
+
+  const addToMealsMutation = useMutation({
+    mutationFn: async (data: { name: string; prepTime: string; calories: number; difficulty: string; tags: string[] }) => {
+      await apiRequest("POST", "/api/meals", {
+        name: data.name,
+        prepTime: data.prepTime,
+        calories: data.calories,
+        difficulty: data.difficulty,
+        tags: data.tags,
+        iconName: "ChefHat",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/meals"] });
+      toast({ title: "Recipe added to your meal collection!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to add recipe", variant: "destructive" });
     },
   });
 
@@ -313,6 +333,34 @@ export function AiMealGenerator() {
                   <span className="flex items-center gap-1"><Flame className="w-3 h-3" /> {generatedRecipe.totalCalories} cal total</span>
                   <span className="flex items-center gap-1"><Flame className="w-3 h-3" /> {generatedRecipe.caloriesPerServing} cal/serving</span>
                 </div>
+
+                <Button
+                  className="w-full"
+                  variant="default"
+                  onClick={() => {
+                    addToMealsMutation.mutate({
+                      name: generatedRecipe.recipeName,
+                      prepTime: generatedRecipe.prepTime,
+                      calories: generatedRecipe.caloriesPerServing,
+                      difficulty: generatedRecipe.difficulty,
+                      tags: [cuisine, ...(selectedRestrictions.length > 0 ? selectedRestrictions.slice(0, 2) : [])],
+                    });
+                  }}
+                  disabled={addToMealsMutation.isPending}
+                  data-testid="button-add-to-meals"
+                >
+                  {addToMealsMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add to Meal Plan
+                    </>
+                  )}
+                </Button>
               </div>
             )}
           </CardContent>
@@ -340,17 +388,36 @@ export function AiMealGenerator() {
                         <span>{recipe.portions} servings</span>
                       </div>
                     </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      data-testid={`button-delete-recipe-${recipe.id}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteMutation.mutate(recipe.id);
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4 text-muted-foreground" />
-                    </Button>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        data-testid={`button-add-past-recipe-${recipe.id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToMealsMutation.mutate({
+                            name: recipe.recipeName,
+                            prepTime: recipe.prepTime,
+                            calories: recipe.caloriesPerServing,
+                            difficulty: recipe.difficulty,
+                            tags: [recipe.cuisine, ...(recipe.dietaryRestrictions || []).slice(0, 2)],
+                          });
+                        }}
+                      >
+                        <Plus className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        data-testid={`button-delete-recipe-${recipe.id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteMutation.mutate(recipe.id);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4 text-muted-foreground" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

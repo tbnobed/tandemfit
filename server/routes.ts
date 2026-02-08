@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import {
   insertWorkoutLogSchema,
+  insertMealSchema,
   insertMealPlanSchema,
   insertMotivationMessageSchema,
   insertActivitySchema,
@@ -75,6 +76,19 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/meals", async (req, res) => {
+    try {
+      const parsed = insertMealSchema.parse(req.body);
+      const meal = await storage.createMeal(parsed);
+      res.json(meal);
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        return res.status(400).json({ error: e.errors });
+      }
+      res.status(500).json({ error: "Failed to create meal" });
+    }
+  });
+
   app.get("/api/meal-plans", async (_req, res) => {
     try {
       const plans = await storage.getMealPlans();
@@ -104,6 +118,24 @@ export async function registerRoutes(
       res.json(plan);
     } catch (e) {
       res.status(500).json({ error: "Failed to update meal plan" });
+    }
+  });
+
+  app.delete("/api/meals/:id", async (req, res) => {
+    try {
+      await storage.deleteMeal(req.params.id);
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to delete meal" });
+    }
+  });
+
+  app.delete("/api/meal-plans/:id", async (req, res) => {
+    try {
+      await storage.deleteMealPlan(req.params.id);
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to delete meal plan" });
     }
   });
 

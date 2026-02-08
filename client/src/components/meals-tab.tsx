@@ -1,6 +1,6 @@
 import {
   Calendar, Utensils, Timer, Flame, BarChart3, Salad, Fish, Soup,
-  Cookie, Egg, Sandwich, ChefHat, Check, Plus
+  Cookie, Egg, Sandwich, ChefHat, Check, Plus, Trash2, X
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,10 +26,12 @@ interface MealsTabProps {
   mealPlans: MealPlan[];
   onPlanMeal: (data: { mealId: string; dayOfWeek: number }) => void;
   onToggleMealComplete: (planId: string, completed: boolean) => void;
+  onDeleteMeal: (id: string) => void;
+  onDeleteMealPlan: (id: string) => void;
   isPlanning: boolean;
 }
 
-export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, isPlanning }: MealsTabProps) {
+export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, onDeleteMeal, onDeleteMealPlan, isPlanning }: MealsTabProps) {
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [selectedDay, setSelectedDay] = useState<string>("");
 
@@ -90,6 +92,17 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, i
                       ))}
                     </div>
                   </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    data-testid={`button-delete-meal-${meal.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteMeal(meal.id);
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 text-muted-foreground" />
+                  </Button>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
@@ -120,7 +133,7 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, i
               return (
                 <div
                   key={day}
-                  className={`text-center p-2 sm:p-3 border border-dashed rounded-md transition-colors cursor-pointer ${
+                  className={`relative text-center p-2 sm:p-3 border border-dashed rounded-md transition-colors cursor-pointer ${
                     planned
                       ? planned.plan.completed
                         ? "border-emerald-400 bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-950/30"
@@ -134,6 +147,19 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, i
                   }}
                   data-testid={`mealplan-day-${idx}`}
                 >
+                  {planned && (
+                    <button
+                      className="absolute top-0.5 right-0.5 w-4 h-4 rounded-sm flex items-center justify-center text-muted-foreground/60 visibility-hidden group-hover:visibility-visible"
+                      style={{ visibility: "visible" }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteMealPlan(planned.plan.id);
+                      }}
+                      data-testid={`button-clear-day-${idx}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
                   <div className="font-semibold text-xs text-muted-foreground mb-1">{day}</div>
                   {planned ? (
                     <div>

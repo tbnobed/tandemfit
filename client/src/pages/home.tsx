@@ -110,6 +110,33 @@ export default function Home() {
     },
   });
 
+  const deleteMealMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/meals/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/meals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/meal-plans"] });
+      toast({ title: "Recipe removed" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete recipe", variant: "destructive" });
+    },
+  });
+
+  const deleteMealPlanMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/meal-plans/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/meal-plans"] });
+      toast({ title: "Day cleared" });
+    },
+    onError: () => {
+      toast({ title: "Failed to clear day", variant: "destructive" });
+    },
+  });
+
   const createActivityMutation = useMutation({
     mutationFn: async (data: { name: string; type: string; duration: string; calories: number; difficulty: string; iconName: string }) => {
       await apiRequest("POST", "/api/activities", data);
@@ -224,6 +251,8 @@ export default function Home() {
             onToggleMealComplete={(planId, completed) =>
               toggleMealCompleteMutation.mutate({ planId, completed })
             }
+            onDeleteMeal={(id) => deleteMealMutation.mutate(id)}
+            onDeleteMealPlan={(id) => deleteMealPlanMutation.mutate(id)}
             isPlanning={planMealMutation.isPending}
           />
         )}

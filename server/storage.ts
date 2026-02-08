@@ -31,10 +31,12 @@ export interface IStorage {
 
   getMeals(): Promise<Meal[]>;
   createMeal(meal: InsertMeal): Promise<Meal>;
+  deleteMeal(id: string): Promise<void>;
 
   getMealPlans(): Promise<MealPlan[]>;
   createMealPlan(plan: InsertMealPlan): Promise<MealPlan>;
   updateMealPlan(id: string, data: Partial<InsertMealPlan & { completed: boolean }>): Promise<MealPlan | undefined>;
+  deleteMealPlan(id: string): Promise<void>;
 
   getChallenges(): Promise<Challenge[]>;
   createChallenge(challenge: InsertChallenge): Promise<Challenge>;
@@ -113,6 +115,11 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
+  async deleteMeal(id: string): Promise<void> {
+    await db.delete(mealPlans).where(eq(mealPlans.mealId, id));
+    await db.delete(meals).where(eq(meals.id, id));
+  }
+
   async getMealPlans(): Promise<MealPlan[]> {
     return db.select().from(mealPlans);
   }
@@ -133,6 +140,10 @@ export class DatabaseStorage implements IStorage {
   async updateMealPlan(id: string, data: Partial<InsertMealPlan & { completed: boolean }>): Promise<MealPlan | undefined> {
     const [updated] = await db.update(mealPlans).set(data).where(eq(mealPlans.id, id)).returning();
     return updated;
+  }
+
+  async deleteMealPlan(id: string): Promise<void> {
+    await db.delete(mealPlans).where(eq(mealPlans.id, id));
   }
 
   async getChallenges(): Promise<Challenge[]> {

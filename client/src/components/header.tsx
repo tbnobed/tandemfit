@@ -1,6 +1,7 @@
-import { Heart, Flame } from "lucide-react";
+import { Flame } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import type { Partner } from "@shared/schema";
+import logoPath from "@assets/image_1770592476016.png";
 
 interface HeaderProps {
   partners: Partner[];
@@ -14,10 +15,8 @@ export function Header({ partners }: HeaderProps) {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-5">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-md bg-white/20 flex items-center justify-center">
-              <Heart className="w-5 h-5 fill-white" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">FitTogether</h1>
+            <img src={logoPath} alt="TandemFit" className="w-9 h-9 rounded-md object-cover" data-testid="img-logo" />
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">TandemFit</h1>
           </div>
           <div className="flex items-center gap-3 sm:gap-4">
             {streak > 0 && (

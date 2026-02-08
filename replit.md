@@ -1,7 +1,7 @@
-# FitTogether - Couples Fitness App
+# TandemFit - Couples Fitness App
 
 ## Overview
-A couples fitness tracking app for Obed and Kristina with shared progress tracking, couple challenges, activity suggestions, meal planning, motivation system, gamification (streaks, badges, rewards), and AI-powered personalized workout generation.
+A couples fitness tracking app for Obed and Kristina with shared progress tracking, couple challenges, activity suggestions, meal planning, motivation system, gamification (streaks, badges, rewards), and AI-powered personalized workout generation. Rebranded from FitTogether to TandemFit with custom logo.
 
 ## Architecture
 - **Frontend**: React + TypeScript + Vite, styled with Tailwind CSS + shadcn/ui

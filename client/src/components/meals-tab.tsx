@@ -69,6 +69,7 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
   const [formIngredients, setFormIngredients] = useState("");
   const [formSteps, setFormSteps] = useState("");
   const [shoppingListExpanded, setShoppingListExpanded] = useState(false);
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
 
   const openViewDialog = (meal: Meal) => {
     setSelectedMeal(meal);
@@ -505,7 +506,11 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
                   <ShoppingCart className="w-4 h-4 text-chart-3" />
                   <span className="font-bold text-sm text-foreground">Weekly Shopping List</span>
                   {shoppingItems.length > 0 && (
-                    <Badge variant="secondary">{shoppingItems.length} items</Badge>
+                    <Badge variant="secondary">
+                      {checkedItems.size > 0
+                        ? `${Math.min(checkedItems.size, shoppingItems.length)}/${shoppingItems.length}`
+                        : `${shoppingItems.length} items`}
+                    </Badge>
                   )}
                 </div>
                 <ChevronDown className={`w-5 h-5 text-muted-foreground flex-shrink-0 transition-transform ${shoppingListExpanded ? "rotate-180" : ""}`} />
@@ -519,17 +524,29 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
                     </p>
                   ) : (
                     <div className="space-y-1.5" data-testid="shopping-list-items">
-                      {shoppingItems.map((item, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center gap-3 p-2.5 bg-muted/40 rounded-md text-sm"
-                          data-testid={`shopping-item-${i}`}
-                        >
-                          <ShoppingBasket className="w-4 h-4 text-chart-3 flex-shrink-0" />
-                          <span className="font-medium text-foreground">{item.item}</span>
-                          <span className="text-muted-foreground ml-auto text-xs whitespace-nowrap">{item.quantity}</span>
-                        </div>
-                      ))}
+                      {shoppingItems.map((item, i) => {
+                        const isChecked = checkedItems.has(item.item.toLowerCase());
+                        return (
+                          <div
+                            key={i}
+                            className={`flex items-center gap-3 p-2.5 rounded-md text-sm cursor-pointer transition-colors ${isChecked ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-muted/40"}`}
+                            onClick={() => {
+                              const next = new Set(checkedItems);
+                              const key = item.item.toLowerCase();
+                              if (next.has(key)) next.delete(key);
+                              else next.add(key);
+                              setCheckedItems(next);
+                            }}
+                            data-testid={`shopping-item-${i}`}
+                          >
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${isChecked ? "bg-emerald-500 border-emerald-500" : "border-muted-foreground/40"}`}>
+                              {isChecked && <Check className="w-3 h-3 text-white" />}
+                            </div>
+                            <span className={`font-medium transition-colors ${isChecked ? "line-through text-muted-foreground" : "text-foreground"}`}>{item.item}</span>
+                            <span className={`ml-auto text-xs whitespace-nowrap transition-colors ${isChecked ? "line-through text-muted-foreground/60" : "text-muted-foreground"}`}>{item.quantity}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

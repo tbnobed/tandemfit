@@ -391,26 +391,69 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
           return name;
         };
 
-        const ingredientMap = new Map<string, string[]>();
-        plannedMeals.forEach(meal => {
-          if (!meal.ingredients) return;
+        const mealCounts = new Map<string, number>();
+        mealPlans.filter(p => p.mealId).forEach(p => {
+          mealCounts.set(p.mealId!, (mealCounts.get(p.mealId!) || 0) + 1);
+        });
+
+        const parseAmount = (amt: string): { num: number; unit: string } | null => {
+          const match = amt.trim().match(/^([\d./]+)\s*(.*)/);
+          if (!match) return null;
+          let num = 0;
+          if (match[1].includes("/")) {
+            const parts = match[1].split("/");
+            num = parseFloat(parts[0]) / parseFloat(parts[1]);
+          } else {
+            num = parseFloat(match[1]);
+          }
+          if (isNaN(num)) return null;
+          return { num, unit: match[2].trim().toLowerCase() };
+        };
+
+        const ingredientMap = new Map<string, Map<string, number>>();
+        const uniqueMeals = Array.from(new Set(mealPlans.filter(p => p.mealId).map(p => p.mealId!)));
+        uniqueMeals.forEach(mealId => {
+          const meal = meals.find(m => m.id === mealId);
+          if (!meal?.ingredients) return;
+          const count = mealCounts.get(mealId) || 1;
           try {
             const parsed: Ingredient[] = JSON.parse(meal.ingredients);
             parsed.forEach(ing => {
               const cleaned = cleanItemName(ing.item);
               const key = cleaned.toLowerCase().trim();
               if (!key) return;
-              const existing = ingredientMap.get(key) || [];
-              existing.push(ing.amount);
-              ingredientMap.set(key, existing);
+              const unitMap = ingredientMap.get(key) || new Map<string, number>();
+              const parsed2 = parseAmount(ing.amount);
+              if (parsed2) {
+                const existing = unitMap.get(parsed2.unit) || 0;
+                unitMap.set(parsed2.unit, existing + parsed2.num * count);
+              } else {
+                const raw = ing.amount.trim().toLowerCase() || "as needed";
+                const existing = unitMap.get(raw) || 0;
+                unitMap.set(raw, existing + count);
+              }
+              ingredientMap.set(key, unitMap);
             });
           } catch {}
         });
 
+        const formatQuantity = (unitMap: Map<string, number>): string => {
+          const parts: string[] = [];
+          unitMap.forEach((num, unit) => {
+            if (unit === "as needed") {
+              parts.push("as needed");
+            } else {
+              const display = num % 1 === 0 ? num.toString() : num.toFixed(1).replace(/\.0$/, "");
+              parts.push(unit ? `${display} ${unit}` : display);
+            }
+          });
+          return parts.join(", ");
+        };
+
         const shoppingItems = Array.from(ingredientMap.entries())
-          .map(([item, amounts]) => ({
+          .map(([item, unitMap]) => ({
             item: item.charAt(0).toUpperCase() + item.slice(1),
-            amounts,
+            quantity: formatQuantity(unitMap),
           }))
           .sort((a, b) => a.item.localeCompare(b.item));
 
@@ -448,6 +491,7 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
                         >
                           <ShoppingBasket className="w-4 h-4 text-chart-3 flex-shrink-0" />
                           <span className="font-medium text-foreground">{item.item}</span>
+                          <span className="text-muted-foreground ml-auto text-xs whitespace-nowrap">{item.quantity}</span>
                         </div>
                       ))}
                     </div>

@@ -63,6 +63,67 @@ export function DashboardTab({
     partners.length > 0 ? Math.max(...partners.map((p) => p.streak)) : 0;
   const activeChallenges = challenges.filter((c) => c.active).slice(0, 2);
 
+  const totalWeeklyWorkouts = partners.reduce(
+    (sum, p) => sum + getWeeklyCompletedCount(workoutLogs, p.id), 0
+  );
+  const bothHitGoal = partners.length === 2 && partners.every(
+    (p) => p.weeklyGoal > 0 && getWeeklyCompletedCount(workoutLogs, p.id) >= p.weeklyGoal
+  );
+  const totalTodayCalories = partners.reduce(
+    (sum, p) => sum + getTodayCalories(workoutLogs, p.id), 0
+  );
+
+  const getBannerContent = (): { title: string; subtitle: string } => {
+    if (bothHitGoal) {
+      return {
+        title: "Weekly Goals Crushed!",
+        subtitle: "Both of you hit your workout goals this week. What a power couple!",
+      };
+    }
+    if (streak >= 14) {
+      return {
+        title: "Unstoppable Together!",
+        subtitle: `${streak}-day streak! You two are a force of nature.`,
+      };
+    }
+    if (streak >= 7) {
+      return {
+        title: "A Full Week Strong!",
+        subtitle: `${streak}-day streak and counting. Keep inspiring each other!`,
+      };
+    }
+    if (totalTodayCalories > 500) {
+      return {
+        title: "Burning It Up Today!",
+        subtitle: `${totalTodayCalories} calories burned together today. What a team!`,
+      };
+    }
+    if (totalWeeklyWorkouts >= 4) {
+      return {
+        title: "Staying Consistent!",
+        subtitle: `${totalWeeklyWorkouts} workouts between you this week. Keep that momentum!`,
+      };
+    }
+    if (streak >= 3) {
+      return {
+        title: "Building Momentum!",
+        subtitle: `${streak}-day streak going. Every day counts!`,
+      };
+    }
+    if (totalWeeklyWorkouts > 0) {
+      return {
+        title: "Great Start This Week!",
+        subtitle: `${totalWeeklyWorkouts} workout${totalWeeklyWorkouts > 1 ? "s" : ""} logged so far. Let's keep it going!`,
+      };
+    }
+    return {
+      title: "Ready to Move?",
+      subtitle: "Start your first workout and build a streak together!",
+    };
+  };
+
+  const banner = getBannerContent();
+
   return (
     <div className="space-y-6">
       <Card className="overflow-visible border-0 bg-gradient-to-r from-[hsl(320,85%,45%)] to-[hsl(340,80%,50%)] dark:from-[hsl(320,85%,35%)] dark:to-[hsl(340,80%,40%)] text-white">
@@ -70,12 +131,10 @@ export function DashboardTab({
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-xl sm:text-2xl font-bold mb-1" data-testid="text-motivation-banner">
-                You're Both Amazing!
+                {banner.title}
               </h2>
-              <p className="text-white/80 text-sm sm:text-base">
-                {streak > 0
-                  ? `${streak}-day streak and counting. Keep inspiring each other!`
-                  : "Start your first workout and build a streak together!"}
+              <p className="text-white/80 text-sm sm:text-base" data-testid="text-motivation-subtitle">
+                {banner.subtitle}
               </p>
             </div>
             <Heart className="w-12 h-12 sm:w-16 sm:h-16 fill-white/20 text-white/20 flex-shrink-0" />

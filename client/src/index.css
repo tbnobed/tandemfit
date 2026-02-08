@@ -286,3 +286,25 @@
     inset: -1px;
   }
 }
+
+.flip-card {
+  perspective: 800px;
+}
+.flip-card-inner {
+  position: relative;
+  transition: transform 0.5s ease;
+  transform-style: preserve-3d;
+}
+.flip-card-inner.flipped {
+  transform: rotateY(180deg);
+}
+.flip-card-front,
+.flip-card-back {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-card-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+}

@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Trophy, Zap, Target, Star, Send, Dumbbell, Clock, ChevronDown } from "lucide-react";
+import { Heart, MessageCircle, Trophy, Zap, Target, Star, Send, Dumbbell, Clock, RotateCcw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,7 +66,7 @@ export function DashboardTab({
   isSending,
 }: DashboardTabProps) {
   const [newMessage, setNewMessage] = useState("");
-  const [expandedPartner, setExpandedPartner] = useState<string | null>(null);
+  const [flippedPartner, setFlippedPartner] = useState<string | null>(null);
 
   const handleSend = () => {
     if (newMessage.trim()) {
@@ -173,119 +173,150 @@ export function DashboardTab({
           );
           const isBlue = partner.color === "blue";
 
-          const isExpanded = expandedPartner === partner.id;
+          const isFlipped = flippedPartner === partner.id;
+          const totalWeeklyCals = weeklyWorkoutList.reduce((s, l) => s + l.caloriesBurned, 0);
+          const totalWeeklyMins = weeklyWorkoutList.reduce((s, l) => s + l.duration, 0);
 
           return (
-            <Card
+            <div
               key={partner.id}
+              className="flip-card cursor-pointer"
+              onClick={() => setFlippedPartner(isFlipped ? null : partner.id)}
               data-testid={`card-partner-${partner.name.toLowerCase()}`}
-              className="cursor-pointer hover-elevate"
-              onClick={() => setExpandedPartner(isExpanded ? null : partner.id)}
             >
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between gap-2 mb-4">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-lg ${
-                        isBlue ? "bg-blue-500" : "bg-pink-500"
-                      }`}
-                    >
-                      {partner.name[0]}
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-base" data-testid={`text-partner-name-${partner.name.toLowerCase()}`}>{partner.name}</h3>
-                      <p className="text-xs text-muted-foreground">This Week</p>
-                    </div>
-                  </div>
-                  <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between gap-2 text-sm mb-2">
-                      <span className="font-medium text-foreground">
-                        Weekly Workouts
-                      </span>
-                      <span
-                        className={`font-bold ${
-                          isBlue ? "text-blue-600 dark:text-blue-400" : "text-pink-600 dark:text-pink-400"
-                        }`}
-                      >
-                        {weeklyCompleted}/{partner.weeklyGoal}
-                        {weeklyPercent >= 100 ? " (Done!)" : ""}
-                      </span>
-                    </div>
-                    <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-700 ${
-                          isBlue
-                            ? "bg-gradient-to-r from-blue-500 to-blue-600"
-                            : "bg-gradient-to-r from-pink-500 to-pink-600"
-                        }`}
-                        style={{ width: `${weeklyPercent}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between gap-2 text-sm mb-2">
-                      <span className="font-medium text-foreground">
-                        Calories Burned Today
-                      </span>
-                      <span
-                        className={`font-bold ${
-                          isBlue ? "text-blue-600 dark:text-blue-400" : "text-pink-600 dark:text-pink-400"
-                        }`}
-                      >
-                        {todayCalories}/{partner.calorieGoal}
-                      </span>
-                    </div>
-                    <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-700"
-                        style={{ width: `${caloriePercent}%` }}
-                      />
-                    </div>
-                  </div>
-                  {isExpanded && weeklyWorkoutList.length > 0 && (
-                    <div className="pt-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Dumbbell className={`w-3.5 h-3.5 ${isBlue ? "text-blue-500" : "text-pink-500"}`} />
-                        <span className="font-medium text-sm text-foreground">Completed This Week</span>
+              <div className={`flip-card-inner ${isFlipped ? "flipped" : ""}`}>
+                <div className="flip-card-front">
+                  <Card className="h-full">
+                    <CardContent className="p-5">
+                      <div className="flex items-center justify-between gap-2 mb-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-lg ${
+                              isBlue ? "bg-blue-500" : "bg-pink-500"
+                            }`}
+                          >
+                            {partner.name[0]}
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-base" data-testid={`text-partner-name-${partner.name.toLowerCase()}`}>{partner.name}</h3>
+                            <p className="text-xs text-muted-foreground">This Week</p>
+                          </div>
+                        </div>
+                        <Dumbbell className={`w-5 h-5 ${isBlue ? "text-blue-400" : "text-pink-400"}`} />
                       </div>
-                      <div className="space-y-1.5">
-                        {weeklyWorkoutList.map((log) => {
-                          const logDate = new Date(log.loggedAt);
-                          const dayName = logDate.toLocaleDateString("en-US", { weekday: "short" });
-                          return (
+                      <div className="space-y-4">
+                        <div>
+                          <div className="flex justify-between gap-2 text-sm mb-2">
+                            <span className="font-medium text-foreground">Weekly Workouts</span>
+                            <span className={`font-bold ${isBlue ? "text-blue-600 dark:text-blue-400" : "text-pink-600 dark:text-pink-400"}`}>
+                              {weeklyCompleted}/{partner.weeklyGoal}
+                              {weeklyPercent >= 100 ? " (Done!)" : ""}
+                            </span>
+                          </div>
+                          <div className="h-2.5 bg-muted rounded-full overflow-hidden">
                             <div
-                              key={log.id}
-                              className="flex items-center justify-between gap-2 text-xs p-2 bg-accent/40 rounded-md"
-                              data-testid={`workout-log-${log.id}`}
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className={`font-semibold shrink-0 ${isBlue ? "text-blue-600 dark:text-blue-400" : "text-pink-600 dark:text-pink-400"}`}>
-                                  {dayName}
-                                </span>
-                                <span className="text-foreground truncate">{log.activityName}</span>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0 text-muted-foreground">
-                                <span className="flex items-center gap-0.5">
-                                  <Clock className="w-3 h-3" />
-                                  {log.duration}m
-                                </span>
-                                <span>{log.caloriesBurned} cal</span>
-                              </div>
-                            </div>
-                          );
-                        })}
+                              className={`h-full rounded-full transition-all duration-700 ${
+                                isBlue ? "bg-gradient-to-r from-blue-500 to-blue-600" : "bg-gradient-to-r from-pink-500 to-pink-600"
+                              }`}
+                              style={{ width: `${weeklyPercent}%` }}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex justify-between gap-2 text-sm mb-2">
+                            <span className="font-medium text-foreground">Calories Burned Today</span>
+                            <span className={`font-bold ${isBlue ? "text-blue-600 dark:text-blue-400" : "text-pink-600 dark:text-pink-400"}`}>
+                              {todayCalories}/{partner.calorieGoal}
+                            </span>
+                          </div>
+                          <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-700"
+                              style={{ width: `${caloriePercent}%` }}
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  {isExpanded && weeklyWorkoutList.length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center py-2">No workouts logged this week yet</p>
-                  )}
+                      <p className="text-xs text-muted-foreground text-center mt-4">Tap to see workouts</p>
+                    </CardContent>
+                  </Card>
                 </div>
-              </CardContent>
-            </Card>
+
+                <div className="flip-card-back">
+                  <Card className="h-full">
+                    <CardContent className="p-5 h-full flex flex-col">
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                              isBlue ? "bg-blue-500" : "bg-pink-500"
+                            }`}
+                          >
+                            {partner.name[0]}
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-sm">{partner.name}'s Workouts</h3>
+                            <p className="text-xs text-muted-foreground">This Week</p>
+                          </div>
+                        </div>
+                        <RotateCcw className="w-4 h-4 text-muted-foreground" />
+                      </div>
+
+                      {weeklyWorkoutList.length > 0 ? (
+                        <>
+                          <div className="flex gap-3 mb-3">
+                            <div className={`flex-1 rounded-md p-2 text-center ${isBlue ? "bg-blue-500/10" : "bg-pink-500/10"}`}>
+                              <p className={`text-lg font-bold ${isBlue ? "text-blue-600 dark:text-blue-400" : "text-pink-600 dark:text-pink-400"}`}>{weeklyWorkoutList.length}</p>
+                              <p className="text-[10px] text-muted-foreground">Workouts</p>
+                            </div>
+                            <div className={`flex-1 rounded-md p-2 text-center ${isBlue ? "bg-blue-500/10" : "bg-pink-500/10"}`}>
+                              <p className={`text-lg font-bold ${isBlue ? "text-blue-600 dark:text-blue-400" : "text-pink-600 dark:text-pink-400"}`}>{totalWeeklyMins}</p>
+                              <p className="text-[10px] text-muted-foreground">Minutes</p>
+                            </div>
+                            <div className={`flex-1 rounded-md p-2 text-center ${isBlue ? "bg-blue-500/10" : "bg-pink-500/10"}`}>
+                              <p className={`text-lg font-bold ${isBlue ? "text-blue-600 dark:text-blue-400" : "text-pink-600 dark:text-pink-400"}`}>{totalWeeklyCals}</p>
+                              <p className="text-[10px] text-muted-foreground">Calories</p>
+                            </div>
+                          </div>
+                          <div className="space-y-1.5 flex-1 overflow-y-auto">
+                            {weeklyWorkoutList.map((log) => {
+                              const logDate = new Date(log.loggedAt);
+                              const dayName = logDate.toLocaleDateString("en-US", { weekday: "short" });
+                              return (
+                                <div
+                                  key={log.id}
+                                  className="flex items-center justify-between gap-2 text-xs p-2 bg-accent/40 rounded-md"
+                                  data-testid={`workout-log-${log.id}`}
+                                >
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className={`font-semibold shrink-0 ${isBlue ? "text-blue-600 dark:text-blue-400" : "text-pink-600 dark:text-pink-400"}`}>
+                                      {dayName}
+                                    </span>
+                                    <span className="text-foreground truncate">{log.activityName}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0 text-muted-foreground">
+                                    <span className="flex items-center gap-0.5">
+                                      <Clock className="w-3 h-3" />
+                                      {log.duration}m
+                                    </span>
+                                    <span>{log.caloriesBurned} cal</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center">
+                          <p className="text-sm text-muted-foreground">No workouts logged this week yet</p>
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground text-center mt-3">Tap to flip back</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </div>
           );
         })}
       </div>

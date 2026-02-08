@@ -52,6 +52,7 @@ const difficultyColor = (d: string) => {
 export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
   const [selectedPartnerId, setSelectedPartnerId] = useState<string>("");
   const [selectedFocus, setSelectedFocus] = useState<string>("");
+  const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
   const [generatedPlan, setGeneratedPlan] = useState<{
     planName: string;
     exercises: Exercise[];
@@ -93,6 +94,7 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
         difficulty: data.difficulty,
         focusArea: data.focusArea,
       });
+      setExpandedExercise(null);
       queryClient.invalidateQueries({ queryKey: ["/api/ai-workout-plans", selectedPartnerId] });
       toast({ title: "Workout plan generated!" });
     },
@@ -277,40 +279,46 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               {generatedPlan.exercises.map((ex, i) => (
                 <div
                   key={i}
-                  className="p-4 bg-muted/40 rounded-md"
+                  className="bg-muted/40 rounded-md cursor-pointer hover-elevate"
                   data-testid={`exercise-item-${i}`}
+                  onClick={() => setExpandedExercise(expandedExercise === i ? null : i)}
                 >
-                  <div className="flex items-start justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
-                        {i + 1}
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-sm text-foreground">{ex.name}</h4>
-                        <p className="text-xs text-muted-foreground">{ex.muscleGroup}</p>
-                      </div>
+                  <div className="flex items-center gap-3 p-3">
+                    <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+                      {i + 1}
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-sm text-foreground truncate">{ex.name}</h4>
+                    </div>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">{ex.sets}x{ex.reps}</span>
+                    <ChevronRight className={`w-4 h-4 text-muted-foreground flex-shrink-0 transition-transform ${expandedExercise === i ? "rotate-90" : ""}`} />
                   </div>
-                  <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
-                    <div className="text-center p-2 bg-background rounded-md">
-                      <div className="font-semibold text-foreground">{ex.sets} sets</div>
-                      <div className="text-muted-foreground">{ex.reps}</div>
-                    </div>
-                    <div className="text-center p-2 bg-background rounded-md">
-                      <div className="font-semibold text-foreground">{ex.restSeconds}s</div>
-                      <div className="text-muted-foreground">Rest</div>
-                    </div>
-                    <div className="text-center p-2 bg-background rounded-md">
-                      <div className="font-semibold text-foreground flex items-center justify-center gap-1">
-                        <Target className="w-3 h-3" /> Tip
+                  {expandedExercise === i && (
+                    <div className="px-3 pb-3 space-y-2">
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div className="text-center p-2 bg-background rounded-md">
+                          <div className="font-semibold text-foreground">{ex.sets} sets</div>
+                          <div className="text-muted-foreground">{ex.reps}</div>
+                        </div>
+                        <div className="text-center p-2 bg-background rounded-md">
+                          <div className="font-semibold text-foreground">{ex.restSeconds}s</div>
+                          <div className="text-muted-foreground">Rest</div>
+                        </div>
+                        <div className="text-center p-2 bg-background rounded-md">
+                          <div className="font-semibold text-foreground">{ex.muscleGroup}</div>
+                          <div className="text-muted-foreground">Muscle</div>
+                        </div>
                       </div>
-                      <div className="text-muted-foreground">{ex.formTip}</div>
+                      <div className="flex items-start gap-2 p-2 bg-background rounded-md text-xs">
+                        <Target className="w-3 h-3 text-primary flex-shrink-0 mt-0.5" />
+                        <p className="text-muted-foreground">{ex.formTip}</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>

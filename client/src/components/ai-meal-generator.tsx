@@ -183,7 +183,7 @@ export function AiMealGenerator() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-md bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0">
           <Sparkles className="w-5 h-5 text-white" />
@@ -388,16 +388,16 @@ export function AiMealGenerator() {
       {pastRecipes.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Previous Recipes</h3>
-          <div className="grid sm:grid-cols-2 gap-3">
+          <div className="grid sm:grid-cols-2 gap-3 min-w-0">
             {pastRecipes.slice(0, 6).map((recipe) => (
               <Card
                 key={recipe.id}
-                className="hover-elevate cursor-pointer"
+                className="hover-elevate cursor-pointer min-w-0"
                 onClick={() => viewPastRecipe(recipe)}
                 data-testid={`card-past-recipe-${recipe.id}`}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-2">
+                <CardContent className="p-4 min-w-0">
+                  <div className="flex items-center justify-between gap-2 min-w-0">
                     <div className="min-w-0 flex-1">
                       <h4 className="font-semibold text-sm text-foreground truncate">{recipe.recipeName}</h4>
                       <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">

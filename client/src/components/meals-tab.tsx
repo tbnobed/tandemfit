@@ -70,7 +70,7 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 min-w-0">
       <AiMealGenerator />
 
       <div className="border-t pt-8">

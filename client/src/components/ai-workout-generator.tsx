@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import {
   Sparkles, Dumbbell, Timer, Flame, Target, ChevronRight,
   RotateCcw, User, Ruler, Weight, Calendar, Loader2,
-  ArrowRight, Settings2, Trash2
+  ArrowRight, Settings2, Trash2, Plus
 } from "lucide-react";
 import type { Partner, AiWorkoutPlan } from "@shared/schema";
 
@@ -184,6 +184,26 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
     },
   });
 
+  const addToActivitiesMutation = useMutation({
+    mutationFn: async (plan: { planName: string; totalDuration: string; totalCalories: number; difficulty: string; focusArea: string }) => {
+      await apiRequest("POST", "/api/activities", {
+        name: plan.planName,
+        type: plan.focusArea,
+        duration: plan.totalDuration,
+        calories: plan.totalCalories,
+        difficulty: plan.difficulty,
+        iconName: "Dumbbell",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      toast({ title: "Added to activities!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to add activity", variant: "destructive" });
+    },
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -342,16 +362,36 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
                   ))}
                 </div>
 
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleGenerate}
-                  disabled={generateMutation.isPending}
-                  data-testid="button-regenerate"
-                >
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  Generate New Plan
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1"
+                    onClick={() => addToActivitiesMutation.mutate(generatedPlan!)}
+                    disabled={addToActivitiesMutation.isPending}
+                    data-testid="button-add-to-activities"
+                  >
+                    {addToActivitiesMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add to Activities
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleGenerate}
+                    disabled={generateMutation.isPending}
+                    data-testid="button-regenerate"
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Regenerate
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
@@ -379,6 +419,23 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
                         <span>~{plan.totalCalories} cal</span>
                       </div>
                     </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      data-testid={`button-add-past-plan-${plan.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addToActivitiesMutation.mutate({
+                          planName: plan.planName,
+                          totalDuration: plan.totalDuration,
+                          totalCalories: plan.totalCalories,
+                          difficulty: plan.difficulty,
+                          focusArea: plan.focusArea,
+                        });
+                      }}
+                    >
+                      <Plus className="w-4 h-4 text-muted-foreground" />
+                    </Button>
                     <Button
                       size="icon"
                       variant="ghost"

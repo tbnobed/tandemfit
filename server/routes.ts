@@ -110,8 +110,105 @@ export async function registerRoutes(
 
   app.get("/api/messages", async (_req, res) => {
     try {
-      const messages = await storage.getMessages();
-      res.json(messages);
+      const [userMessages, allPartners, allLogs, allChallenges] = await Promise.all([
+        storage.getMessages(),
+        storage.getPartners(),
+        storage.getWorkoutLogs(),
+        storage.getChallenges(),
+      ]);
+
+      const now = new Date();
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
+      const startOfDay = new Date(now);
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const smartMessages: { message: string; createdAt: string }[] = [];
+
+      const sortedLogs = [...allLogs].sort((a, b) => new Date(b.loggedAt).getTime() - new Date(a.loggedAt).getTime());
+
+      for (const partner of allPartners) {
+        const weeklyLogs = sortedLogs.filter(
+          (l) => l.partnerId === partner.id && new Date(l.loggedAt) >= startOfWeek
+        );
+        const todayLogs = sortedLogs.filter(
+          (l) => l.partnerId === partner.id && new Date(l.loggedAt) >= startOfDay
+        );
+        const weeklyCount = weeklyLogs.length;
+        const todayCalories = todayLogs.reduce((s, l) => s + l.caloriesBurned, 0);
+        const weeklyCalories = weeklyLogs.reduce((s, l) => s + l.caloriesBurned, 0);
+
+        if (partner.weeklyGoal > 0) {
+          const pct = Math.round((weeklyCount / partner.weeklyGoal) * 100);
+          if (weeklyCount >= partner.weeklyGoal) {
+            smartMessages.push({ message: `${partner.name} hit their weekly goal of ${partner.weeklyGoal} workouts!`, createdAt: now.toISOString() });
+          } else if (pct >= 50) {
+            smartMessages.push({ message: `${partner.name} is ${pct}% to their weekly workout goal (${weeklyCount}/${partner.weeklyGoal}). Keep pushing!`, createdAt: now.toISOString() });
+          } else if (weeklyCount > 0) {
+            smartMessages.push({ message: `${partner.name} has ${weeklyCount} workout${weeklyCount > 1 ? "s" : ""} this week. ${partner.weeklyGoal - weeklyCount} more to hit the goal!`, createdAt: now.toISOString() });
+          }
+        }
+
+        if (todayCalories > 0 && partner.calorieGoal > 0) {
+          smartMessages.push({ message: `${partner.name} burned ${todayCalories} calories today. ${todayCalories >= partner.calorieGoal ? "Goal crushed!" : `${partner.calorieGoal - todayCalories} more to hit the daily target.`}`, createdAt: now.toISOString() });
+        }
+
+        if (partner.streak >= 14) {
+          smartMessages.push({ message: `${partner.name} is on a ${partner.streak}-day streak! Absolutely unstoppable!`, createdAt: now.toISOString() });
+        } else if (partner.streak >= 7) {
+          smartMessages.push({ message: `${partner.name} has a ${partner.streak}-day streak going. That's a whole week of consistency!`, createdAt: now.toISOString() });
+        } else if (partner.streak >= 3) {
+          smartMessages.push({ message: `${partner.name} is building momentum with a ${partner.streak}-day streak!`, createdAt: now.toISOString() });
+        }
+
+        const lastLog = sortedLogs.find((l) => l.partnerId === partner.id);
+        if (lastLog) {
+          smartMessages.push({ message: `${partner.name}'s last workout: ${lastLog.activityName} (${lastLog.duration} min, ${lastLog.caloriesBurned} cal)`, createdAt: new Date(lastLog.loggedAt).toISOString() });
+        }
+      }
+
+      if (allPartners.length === 2) {
+        const [p1, p2] = allPartners;
+        const p1Weekly = sortedLogs.filter((l) => l.partnerId === p1.id && new Date(l.loggedAt) >= startOfWeek).length;
+        const p2Weekly = sortedLogs.filter((l) => l.partnerId === p2.id && new Date(l.loggedAt) >= startOfWeek).length;
+
+        if (p1Weekly > 0 && p2Weekly > 0) {
+          smartMessages.push({ message: `Both ${p1.name} and ${p2.name} worked out this week. Couple goals!`, createdAt: now.toISOString() });
+        }
+
+        if (p1Weekly > p2Weekly && p2Weekly > 0) {
+          smartMessages.push({ message: `${p1.name} is leading with ${p1Weekly} workouts this week. ${p2.name}, time to catch up!`, createdAt: now.toISOString() });
+        } else if (p2Weekly > p1Weekly && p1Weekly > 0) {
+          smartMessages.push({ message: `${p2.name} is leading with ${p2Weekly} workouts this week. ${p1.name}, time to catch up!`, createdAt: now.toISOString() });
+        }
+
+        if (p1.weeklyGoal > 0 && p2.weeklyGoal > 0 && p1Weekly >= p1.weeklyGoal && p2Weekly >= p2.weeklyGoal) {
+          smartMessages.push({ message: `Power couple alert! Both partners crushed their weekly goals!`, createdAt: now.toISOString() });
+        }
+      }
+
+      const activeChallenges = allChallenges.filter((c) => c.active);
+      for (const ch of activeChallenges) {
+        if (ch.progress >= 100) {
+          smartMessages.push({ message: `Challenge complete: "${ch.name}"! Time to claim the ${ch.reward}!`, createdAt: now.toISOString() });
+        } else if (ch.progress >= 75) {
+          smartMessages.push({ message: `Almost there! "${ch.name}" is at ${ch.progress}%. The finish line is in sight!`, createdAt: now.toISOString() });
+        } else if (ch.progress >= 50) {
+          smartMessages.push({ message: `Halfway through "${ch.name}" (${ch.progress}%). Keep it up!`, createdAt: now.toISOString() });
+        }
+      }
+
+      const smartFormatted = smartMessages.slice(0, 10).map((m, i) => ({
+        id: `smart-${i}`,
+        message: m.message,
+        fromPartner: null,
+        createdAt: m.createdAt,
+      }));
+
+      const combined = [...smartFormatted, ...userMessages];
+      combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      res.json(combined.slice(0, 20));
     } catch (e) {
       res.status(500).json({ error: "Failed to fetch messages" });
     }

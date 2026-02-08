@@ -53,6 +53,7 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
   const [selectedPartnerId, setSelectedPartnerId] = useState<string>("");
   const [selectedFocus, setSelectedFocus] = useState<string>("");
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
+  const [planExpanded, setPlanExpanded] = useState(true);
   const [generatedPlan, setGeneratedPlan] = useState<{
     planName: string;
     exercises: Exercise[];
@@ -95,6 +96,7 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
         focusArea: data.focusArea,
       });
       setExpandedExercise(null);
+      setPlanExpanded(true);
       queryClient.invalidateQueries({ queryKey: ["/api/ai-workout-plans", selectedPartnerId] });
       toast({ title: "Workout plan generated!" });
     },
@@ -260,79 +262,83 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
 
       {generatedPlan && (
         <Card data-testid="card-generated-plan">
-          <CardContent className="p-5 space-y-4">
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div>
-                <h3 className="font-bold text-lg text-foreground" data-testid="text-plan-name">{generatedPlan.planName}</h3>
+          <CardContent className="p-0">
+            <div
+              className="flex items-center justify-between gap-3 p-4 cursor-pointer flex-wrap"
+              onClick={() => setPlanExpanded(!planExpanded)}
+              data-testid="button-toggle-plan"
+            >
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-sm text-foreground truncate" data-testid="text-plan-name">{generatedPlan.planName}</h3>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <Badge variant="secondary" className={difficultyColor(generatedPlan.difficulty)}>
                     {generatedPlan.difficulty}
                   </Badge>
-                  <Badge variant="secondary">
-                    {generatedPlan.focusArea}
-                  </Badge>
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><Timer className="w-3 h-3" /> {generatedPlan.totalDuration}</span>
+                  <span className="text-xs text-muted-foreground flex items-center gap-1"><Flame className="w-3 h-3" /> ~{generatedPlan.totalCalories} cal</span>
                 </div>
               </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1"><Timer className="w-4 h-4" /> {generatedPlan.totalDuration}</span>
-                <span className="flex items-center gap-1"><Flame className="w-4 h-4" /> ~{generatedPlan.totalCalories} cal</span>
-              </div>
+              <ChevronRight className={`w-5 h-5 text-muted-foreground flex-shrink-0 transition-transform ${planExpanded ? "rotate-90" : ""}`} />
             </div>
 
-            <div className="space-y-2">
-              {generatedPlan.exercises.map((ex, i) => (
-                <div
-                  key={i}
-                  className="bg-muted/40 rounded-md cursor-pointer hover-elevate"
-                  data-testid={`exercise-item-${i}`}
-                  onClick={() => setExpandedExercise(expandedExercise === i ? null : i)}
+            {planExpanded && (
+              <div className="px-4 pb-4 space-y-3">
+                <div className="space-y-2">
+                  {generatedPlan.exercises.map((ex, i) => (
+                    <div
+                      key={i}
+                      className="bg-muted/40 rounded-md cursor-pointer hover-elevate"
+                      data-testid={`exercise-item-${i}`}
+                      onClick={() => setExpandedExercise(expandedExercise === i ? null : i)}
+                    >
+                      <div className="flex items-center gap-3 p-3">
+                        <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+                          {i + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-sm text-foreground truncate">{ex.name}</h4>
+                        </div>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">{ex.sets}x{ex.reps}</span>
+                        <ChevronRight className={`w-4 h-4 text-muted-foreground flex-shrink-0 transition-transform ${expandedExercise === i ? "rotate-90" : ""}`} />
+                      </div>
+                      {expandedExercise === i && (
+                        <div className="px-3 pb-3 space-y-2">
+                          <div className="grid grid-cols-3 gap-2 text-xs">
+                            <div className="text-center p-2 bg-background rounded-md">
+                              <div className="font-semibold text-foreground">{ex.sets} sets</div>
+                              <div className="text-muted-foreground">{ex.reps}</div>
+                            </div>
+                            <div className="text-center p-2 bg-background rounded-md">
+                              <div className="font-semibold text-foreground">{ex.restSeconds}s</div>
+                              <div className="text-muted-foreground">Rest</div>
+                            </div>
+                            <div className="text-center p-2 bg-background rounded-md">
+                              <div className="font-semibold text-foreground">{ex.muscleGroup}</div>
+                              <div className="text-muted-foreground">Muscle</div>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2 p-2 bg-background rounded-md text-xs">
+                            <Target className="w-3 h-3 text-primary flex-shrink-0 mt-0.5" />
+                            <p className="text-muted-foreground">{ex.formTip}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleGenerate}
+                  disabled={generateMutation.isPending}
+                  data-testid="button-regenerate"
                 >
-                  <div className="flex items-center gap-3 p-3">
-                    <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
-                      {i + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-sm text-foreground truncate">{ex.name}</h4>
-                    </div>
-                    <span className="text-xs text-muted-foreground flex-shrink-0">{ex.sets}x{ex.reps}</span>
-                    <ChevronRight className={`w-4 h-4 text-muted-foreground flex-shrink-0 transition-transform ${expandedExercise === i ? "rotate-90" : ""}`} />
-                  </div>
-                  {expandedExercise === i && (
-                    <div className="px-3 pb-3 space-y-2">
-                      <div className="grid grid-cols-3 gap-2 text-xs">
-                        <div className="text-center p-2 bg-background rounded-md">
-                          <div className="font-semibold text-foreground">{ex.sets} sets</div>
-                          <div className="text-muted-foreground">{ex.reps}</div>
-                        </div>
-                        <div className="text-center p-2 bg-background rounded-md">
-                          <div className="font-semibold text-foreground">{ex.restSeconds}s</div>
-                          <div className="text-muted-foreground">Rest</div>
-                        </div>
-                        <div className="text-center p-2 bg-background rounded-md">
-                          <div className="font-semibold text-foreground">{ex.muscleGroup}</div>
-                          <div className="text-muted-foreground">Muscle</div>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2 p-2 bg-background rounded-md text-xs">
-                        <Target className="w-3 h-3 text-primary flex-shrink-0 mt-0.5" />
-                        <p className="text-muted-foreground">{ex.formTip}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleGenerate}
-              disabled={generateMutation.isPending}
-              data-testid="button-regenerate"
-            >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Generate New Plan
-            </Button>
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Generate New Plan
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

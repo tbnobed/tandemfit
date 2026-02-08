@@ -37,6 +37,8 @@ A couples fitness tracking app for Obed and Kristina with shared progress tracki
 - DELETE `/api/ai-meal-plans/:id` - Delete a saved AI recipe
 
 ## Recent Changes
+- 2026-02-08: Added breakfast/lunch/dinner meal type support - weekly planner now shows 3 rows per day, dialog has meal type picker
+- 2026-02-08: Added recipe detail view in meal dialog (ingredients, steps) and AI recipe removal after adding to collection
 - 2026-02-08: Added ability to add AI recipes to meal collection, delete meals, and clear days from weekly planner
 - 2026-02-08: Added AI meal/recipe generator with OpenAI integration, cuisine/portions/calories/dietary restrictions, ingredient lists and step-by-step instructions
 - 2026-02-08: Added AI workout generator with OpenAI integration, metabolic profiles for partners, exercise plan generation with reps/sets/form tips

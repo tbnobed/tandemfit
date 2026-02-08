@@ -89,7 +89,7 @@ export default function Home() {
   });
 
   const planMealMutation = useMutation({
-    mutationFn: async (data: { mealId: string; dayOfWeek: number }) => {
+    mutationFn: async (data: { mealId: string; dayOfWeek: number; mealType: string }) => {
       await apiRequest("POST", "/api/meal-plans", data);
     },
     onSuccess: () => {

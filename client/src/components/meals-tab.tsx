@@ -26,11 +26,13 @@ function getMealIcon(name: string) {
 }
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const MEAL_TYPES = ["breakfast", "lunch", "dinner"] as const;
+const MEAL_TYPE_LABELS: Record<string, string> = { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner" };
 
 interface MealsTabProps {
   meals: Meal[];
   mealPlans: MealPlan[];
-  onPlanMeal: (data: { mealId: string; dayOfWeek: number }) => void;
+  onPlanMeal: (data: { mealId: string; dayOfWeek: number; mealType: string }) => void;
   onToggleMealComplete: (planId: string, completed: boolean) => void;
   onDeleteMeal: (id: string) => void;
   onDeleteMealPlan: (id: string) => void;
@@ -40,19 +42,22 @@ interface MealsTabProps {
 export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, onDeleteMeal, onDeleteMealPlan, isPlanning }: MealsTabProps) {
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
   const [selectedDay, setSelectedDay] = useState<string>("");
+  const [selectedMealType, setSelectedMealType] = useState<string>("dinner");
 
   const handlePlan = () => {
     if (!selectedMeal || !selectedDay) return;
     onPlanMeal({
       mealId: selectedMeal.id,
       dayOfWeek: parseInt(selectedDay),
+      mealType: selectedMealType,
     });
     setSelectedMeal(null);
     setSelectedDay("");
+    setSelectedMealType("dinner");
   };
 
-  const getMealForDay = (dayIndex: number) => {
-    const plan = mealPlans.find((p) => p.dayOfWeek === dayIndex);
+  const getMealForSlot = (dayIndex: number, mealType: string) => {
+    const plan = mealPlans.find((p) => p.dayOfWeek === dayIndex && p.mealType === mealType);
     if (!plan || !plan.mealId) return null;
     const meal = meals.find((m) => m.id === plan.mealId);
     return { plan, meal };
@@ -133,57 +138,73 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
             <Calendar className="w-4 h-4 text-chart-3" />
             This Week's Meal Plan
           </h3>
-          <div className="grid grid-cols-7 gap-2">
-            {DAYS.map((day, idx) => {
-              const planned = getMealForDay(idx);
-              return (
-                <div
-                  key={day}
-                  className={`relative text-center p-2 sm:p-3 border border-dashed rounded-md transition-colors cursor-pointer ${
-                    planned
-                      ? planned.plan.completed
-                        ? "border-emerald-400 bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-950/30"
-                        : "border-primary/40 bg-primary/5"
-                      : "border-border"
-                  }`}
-                  onClick={() => {
-                    if (planned) {
-                      onToggleMealComplete(planned.plan.id, !planned.plan.completed);
-                    }
-                  }}
-                  data-testid={`mealplan-day-${idx}`}
-                >
-                  {planned && (
-                    <button
-                      className="absolute top-0.5 right-0.5 w-4 h-4 rounded-sm flex items-center justify-center text-muted-foreground/60 visibility-hidden group-hover:visibility-visible"
-                      style={{ visibility: "visible" }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteMealPlan(planned.plan.id);
-                      }}
-                      data-testid={`button-clear-day-${idx}`}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                  <div className="font-semibold text-xs text-muted-foreground mb-1">{day}</div>
-                  {planned ? (
-                    <div>
-                      {planned.plan.completed ? (
-                        <Check className="w-5 h-5 mx-auto text-emerald-600 dark:text-emerald-400" />
-                      ) : (
-                        <ChefHat className="w-5 h-5 mx-auto text-primary" />
-                      )}
-                      <div className="text-[9px] text-muted-foreground mt-0.5 truncate">
-                        {planned.meal?.name?.split(" ")[0] || "Meal"}
-                      </div>
-                    </div>
-                  ) : (
-                    <Plus className="w-5 h-5 mx-auto text-muted-foreground/40" />
-                  )}
-                </div>
-              );
-            })}
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse min-w-[600px]">
+              <thead>
+                <tr>
+                  <th className="text-left text-xs font-semibold text-muted-foreground p-2 w-20"></th>
+                  {DAYS.map((day) => (
+                    <th key={day} className="text-center text-xs font-semibold text-muted-foreground p-2">{day}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {MEAL_TYPES.map((mealType) => (
+                  <tr key={mealType}>
+                    <td className="p-1.5 text-xs font-medium text-muted-foreground align-middle">{MEAL_TYPE_LABELS[mealType]}</td>
+                    {DAYS.map((_day, dayIdx) => {
+                      const planned = getMealForSlot(dayIdx, mealType);
+                      return (
+                        <td key={dayIdx} className="p-1 overflow-visible">
+                          <div
+                            className={`relative text-center p-2 border border-dashed rounded-md transition-colors cursor-pointer min-h-[56px] flex flex-col items-center justify-center ${
+                              planned
+                                ? planned.plan.completed
+                                  ? "border-emerald-400 bg-emerald-50 dark:border-emerald-600 dark:bg-emerald-950/30"
+                                  : "border-primary/40 bg-primary/5"
+                                : "border-border"
+                            }`}
+                            onClick={() => {
+                              if (planned) {
+                                onToggleMealComplete(planned.plan.id, !planned.plan.completed);
+                              }
+                            }}
+                            data-testid={`mealplan-${mealType}-${dayIdx}`}
+                          >
+                            {planned && (
+                              <button
+                                className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-muted flex items-center justify-center text-muted-foreground z-10"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDeleteMealPlan(planned.plan.id);
+                                }}
+                                data-testid={`button-clear-${mealType}-${dayIdx}`}
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
+                            {planned ? (
+                              <div>
+                                {planned.plan.completed ? (
+                                  <Check className="w-4 h-4 mx-auto text-emerald-600 dark:text-emerald-400" />
+                                ) : (
+                                  <ChefHat className="w-4 h-4 mx-auto text-primary" />
+                                )}
+                                <div className="text-[9px] text-muted-foreground mt-0.5 truncate max-w-[60px]">
+                                  {planned.meal?.name?.split(" ")[0] || "Meal"}
+                                </div>
+                              </div>
+                            ) : (
+                              <Plus className="w-4 h-4 text-muted-foreground/40" />
+                            )}
+                          </div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
@@ -257,20 +278,38 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
           })()}
 
           <div className="space-y-4 pt-2 border-t">
-            <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">Add to weekly plan</label>
-              <Select value={selectedDay} onValueChange={setSelectedDay}>
-                <SelectTrigger data-testid="select-meal-day">
-                  <SelectValue placeholder="Pick a day" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DAYS.map((day, idx) => (
-                    <SelectItem key={idx} value={String(idx)} data-testid={`option-day-${day.toLowerCase()}`}>
-                      {day}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <label className="text-sm font-medium text-foreground block">Add to weekly plan</label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Day</label>
+                <Select value={selectedDay} onValueChange={setSelectedDay}>
+                  <SelectTrigger data-testid="select-meal-day">
+                    <SelectValue placeholder="Pick a day" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DAYS.map((day, idx) => (
+                      <SelectItem key={idx} value={String(idx)} data-testid={`option-day-${day.toLowerCase()}`}>
+                        {day}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Meal</label>
+                <Select value={selectedMealType} onValueChange={setSelectedMealType}>
+                  <SelectTrigger data-testid="select-meal-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MEAL_TYPES.map((mt) => (
+                      <SelectItem key={mt} value={mt} data-testid={`option-mealtype-${mt}`}>
+                        {MEAL_TYPE_LABELS[mt]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <Button
               className="w-full"

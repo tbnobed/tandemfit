@@ -66,6 +66,7 @@ export const mealPlans = pgTable("meal_plans", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   mealId: varchar("meal_id"),
   dayOfWeek: integer("day_of_week").notNull(),
+  mealType: text("meal_type").notNull().default("dinner"),
   completed: boolean("completed").notNull().default(false),
 });
 

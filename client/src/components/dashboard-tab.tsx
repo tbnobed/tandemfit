@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Trophy, Zap, Target, Star, Send } from "lucide-react";
+import { Heart, MessageCircle, Trophy, Zap, Target, Star, Send, Dumbbell, Clock, ChevronDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,21 @@ function getWeeklyCompletedCount(logs: WorkoutLog[], partnerId: string): number 
   ).length;
 }
 
+function getWeeklyWorkouts(logs: WorkoutLog[], partnerId: string): WorkoutLog[] {
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  return logs
+    .filter(
+      (log) =>
+        log.partnerId === partnerId &&
+        new Date(log.loggedAt) >= startOfWeek
+    )
+    .sort((a, b) => new Date(b.loggedAt).getTime() - new Date(a.loggedAt).getTime());
+}
+
 function getTodayCalories(logs: WorkoutLog[], partnerId: string): number {
   const now = new Date();
   const startOfDay = new Date(now);
@@ -51,6 +66,7 @@ export function DashboardTab({
   isSending,
 }: DashboardTabProps) {
   const [newMessage, setNewMessage] = useState("");
+  const [expandedPartner, setExpandedPartner] = useState<string | null>(null);
 
   const handleSend = () => {
     if (newMessage.trim()) {
@@ -145,6 +161,7 @@ export function DashboardTab({
       <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
         {partners.map((partner) => {
           const weeklyCompleted = getWeeklyCompletedCount(workoutLogs, partner.id);
+          const weeklyWorkoutList = getWeeklyWorkouts(workoutLogs, partner.id);
           const todayCalories = getTodayCalories(workoutLogs, partner.id);
           const weeklyPercent = Math.min(
             Math.round((weeklyCompleted / partner.weeklyGoal) * 100),
@@ -156,8 +173,15 @@ export function DashboardTab({
           );
           const isBlue = partner.color === "blue";
 
+          const isExpanded = expandedPartner === partner.id;
+
           return (
-            <Card key={partner.id} data-testid={`card-partner-${partner.name.toLowerCase()}`}>
+            <Card
+              key={partner.id}
+              data-testid={`card-partner-${partner.name.toLowerCase()}`}
+              className="cursor-pointer hover-elevate"
+              onClick={() => setExpandedPartner(isExpanded ? null : partner.id)}
+            >
               <CardContent className="p-5">
                 <div className="flex items-center justify-between gap-2 mb-4">
                   <div className="flex items-center gap-3">
@@ -173,11 +197,7 @@ export function DashboardTab({
                       <p className="text-xs text-muted-foreground">This Week</p>
                     </div>
                   </div>
-                  {isBlue ? (
-                    <Target className="w-5 h-5 text-blue-500" />
-                  ) : (
-                    <Star className="w-5 h-5 text-pink-500" />
-                  )}
+                  <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
                 </div>
                 <div className="space-y-4">
                   <div>
@@ -225,6 +245,44 @@ export function DashboardTab({
                       />
                     </div>
                   </div>
+                  {isExpanded && weeklyWorkoutList.length > 0 && (
+                    <div className="pt-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Dumbbell className={`w-3.5 h-3.5 ${isBlue ? "text-blue-500" : "text-pink-500"}`} />
+                        <span className="font-medium text-sm text-foreground">Completed This Week</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {weeklyWorkoutList.map((log) => {
+                          const logDate = new Date(log.loggedAt);
+                          const dayName = logDate.toLocaleDateString("en-US", { weekday: "short" });
+                          return (
+                            <div
+                              key={log.id}
+                              className="flex items-center justify-between gap-2 text-xs p-2 bg-accent/40 rounded-md"
+                              data-testid={`workout-log-${log.id}`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className={`font-semibold shrink-0 ${isBlue ? "text-blue-600 dark:text-blue-400" : "text-pink-600 dark:text-pink-400"}`}>
+                                  {dayName}
+                                </span>
+                                <span className="text-foreground truncate">{log.activityName}</span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0 text-muted-foreground">
+                                <span className="flex items-center gap-0.5">
+                                  <Clock className="w-3 h-3" />
+                                  {log.duration}m
+                                </span>
+                                <span>{log.caloriesBurned} cal</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {isExpanded && weeklyWorkoutList.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-2">No workouts logged this week yet</p>
+                  )}
                 </div>
               </CardContent>
             </Card>

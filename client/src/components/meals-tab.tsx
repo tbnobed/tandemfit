@@ -348,16 +348,19 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
                               </button>
                             )}
                             {planned ? (
-                              <div>
-                                {planned.plan.completed ? (
-                                  <Check className="w-4 h-4 mx-auto text-emerald-600 dark:text-emerald-400" />
-                                ) : (
-                                  <ChefHat className="w-4 h-4 mx-auto text-primary" />
-                                )}
-                                <div className="text-[9px] text-muted-foreground mt-0.5 truncate max-w-[60px]">
-                                  {planned.meal?.name?.split(" ")[0] || "Meal"}
-                                </div>
-                              </div>
+                              (() => {
+                                const SlotIcon = planned.plan.completed
+                                  ? Check
+                                  : planned.meal ? getMealIcon(planned.meal.iconName) : ChefHat;
+                                return (
+                                  <div>
+                                    <SlotIcon className={`w-4 h-4 mx-auto ${planned.plan.completed ? "text-emerald-600 dark:text-emerald-400" : "text-primary"}`} />
+                                    <div className="text-[9px] text-muted-foreground mt-0.5 truncate max-w-[60px]">
+                                      {planned.meal?.name?.split(" ")[0] || "Meal"}
+                                    </div>
+                                  </div>
+                                );
+                              })()
                             ) : (
                               <Plus className="w-4 h-4 text-muted-foreground/40" />
                             )}

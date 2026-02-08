@@ -11,7 +11,7 @@ import {
   type AiMealPlan, type InsertAiMealPlan,
   partners, workoutLogs, activities, meals, mealPlans, challenges, badges, motivationMessages, aiWorkoutPlans, aiMealPlans
 } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 
@@ -131,11 +131,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMealPlan(plan: InsertMealPlan): Promise<MealPlan> {
-    const existing = await db.select().from(mealPlans).where(eq(mealPlans.dayOfWeek, plan.dayOfWeek));
+    const existing = await db.select().from(mealPlans).where(
+      and(eq(mealPlans.dayOfWeek, plan.dayOfWeek), eq(mealPlans.mealType, plan.mealType ?? "dinner"))
+    );
     if (existing.length > 0) {
       const [updated] = await db.update(mealPlans)
         .set({ mealId: plan.mealId, completed: false })
-        .where(eq(mealPlans.dayOfWeek, plan.dayOfWeek))
+        .where(and(eq(mealPlans.dayOfWeek, plan.dayOfWeek), eq(mealPlans.mealType, plan.mealType ?? "dinner")))
         .returning();
       return updated;
     }

@@ -15,6 +15,28 @@ import {
 } from "lucide-react";
 import type { Partner, AiWorkoutPlan } from "@shared/schema";
 
+function cmToFeetInches(cm: number): { feet: number; inches: number } {
+  const totalInches = Math.round(cm / 2.54);
+  return { feet: Math.floor(totalInches / 12), inches: totalInches % 12 };
+}
+
+function feetInchesToCm(feet: number, inches: number): number {
+  return Math.round((feet * 12 + inches) * 2.54);
+}
+
+function kgToLbs(kg: number): number {
+  return Math.round(kg * 2.20462);
+}
+
+function lbsToKg(lbs: number): number {
+  return Math.round(lbs / 2.20462);
+}
+
+function formatHeight(cm: number): string {
+  const { feet, inches } = cmToFeetInches(cm);
+  return `${feet}'${inches}"`;
+}
+
 interface Exercise {
   name: string;
   sets: number;
@@ -59,8 +81,9 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [profileForm, setProfileForm] = useState({
     age: "",
-    heightCm: "",
-    weightKg: "",
+    heightFeet: "",
+    heightInches: "",
+    weightLbs: "",
     fitnessLevel: "intermediate",
     goal: "general fitness",
   });
@@ -117,10 +140,12 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
 
   const handleOpenProfile = () => {
     if (selectedPartner) {
+      const imperial = selectedPartner.heightCm ? cmToFeetInches(selectedPartner.heightCm) : { feet: 0, inches: 0 };
       setProfileForm({
         age: selectedPartner.age?.toString() || "",
-        heightCm: selectedPartner.heightCm?.toString() || "",
-        weightKg: selectedPartner.weightKg?.toString() || "",
+        heightFeet: selectedPartner.heightCm ? imperial.feet.toString() : "",
+        heightInches: selectedPartner.heightCm ? imperial.inches.toString() : "",
+        weightLbs: selectedPartner.weightKg ? kgToLbs(selectedPartner.weightKg).toString() : "",
         fitnessLevel: selectedPartner.fitnessLevel || "intermediate",
         goal: selectedPartner.goal || "general fitness",
       });
@@ -130,12 +155,16 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
 
   const handleSaveProfile = () => {
     if (!selectedPartnerId) return;
+    const feet = profileForm.heightFeet ? parseInt(profileForm.heightFeet) : 0;
+    const inches = profileForm.heightInches ? parseInt(profileForm.heightInches) : 0;
+    const heightCm = (feet || inches) ? feetInchesToCm(feet, inches) : null;
+    const weightKg = profileForm.weightLbs ? lbsToKg(parseInt(profileForm.weightLbs)) : null;
     updateProfileMutation.mutate({
       id: selectedPartnerId,
       body: {
         age: profileForm.age ? parseInt(profileForm.age) : null,
-        heightCm: profileForm.heightCm ? parseInt(profileForm.heightCm) : null,
-        weightKg: profileForm.weightKg ? parseInt(profileForm.weightKg) : null,
+        heightCm,
+        weightKg,
         fitnessLevel: profileForm.fitnessLevel,
         goal: profileForm.goal,
       },
@@ -210,10 +239,10 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
                   <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {selectedPartner.age} yrs</span>
                 )}
                 {selectedPartner.heightCm && (
-                  <span className="flex items-center gap-1"><Ruler className="w-3 h-3" /> {selectedPartner.heightCm} cm</span>
+                  <span className="flex items-center gap-1"><Ruler className="w-3 h-3" /> {formatHeight(selectedPartner.heightCm)}</span>
                 )}
                 {selectedPartner.weightKg && (
-                  <span className="flex items-center gap-1"><Weight className="w-3 h-3" /> {selectedPartner.weightKg} kg</span>
+                  <span className="flex items-center gap-1"><Weight className="w-3 h-3" /> {kgToLbs(selectedPartner.weightKg)} lbs</span>
                 )}
                 {selectedPartner.fitnessLevel && (
                   <span className="flex items-center gap-1"><Target className="w-3 h-3" /> {selectedPartner.fitnessLevel}</span>
@@ -361,7 +390,7 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-sm font-medium text-foreground mb-1 block">Age</label>
                 <Input
@@ -373,24 +402,39 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-foreground mb-1 block">Height (cm)</label>
+                <label className="text-sm font-medium text-foreground mb-1 block">Weight (lbs)</label>
                 <Input
                   type="number"
-                  value={profileForm.heightCm}
-                  onChange={(e) => setProfileForm({ ...profileForm, heightCm: e.target.value })}
-                  placeholder="178"
-                  data-testid="input-profile-height"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1 block">Weight (kg)</label>
-                <Input
-                  type="number"
-                  value={profileForm.weightKg}
-                  onChange={(e) => setProfileForm({ ...profileForm, weightKg: e.target.value })}
-                  placeholder="75"
+                  value={profileForm.weightLbs}
+                  onChange={(e) => setProfileForm({ ...profileForm, weightLbs: e.target.value })}
+                  placeholder="180"
                   data-testid="input-profile-weight"
                 />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1 block">Height</label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="relative">
+                  <Input
+                    type="number"
+                    value={profileForm.heightFeet}
+                    onChange={(e) => setProfileForm({ ...profileForm, heightFeet: e.target.value })}
+                    placeholder="5"
+                    data-testid="input-profile-height-feet"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">ft</span>
+                </div>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    value={profileForm.heightInches}
+                    onChange={(e) => setProfileForm({ ...profileForm, heightInches: e.target.value })}
+                    placeholder="10"
+                    data-testid="input-profile-height-inches"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">in</span>
+                </div>
               </div>
             </div>
             <div>

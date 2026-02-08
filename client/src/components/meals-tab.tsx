@@ -223,7 +223,7 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid sm:grid-cols-2 gap-4 max-h-[480px] overflow-y-auto pr-1">
         {meals.map((meal) => {
           const Icon = getMealIcon(meal.iconName);
           return (

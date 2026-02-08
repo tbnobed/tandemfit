@@ -405,7 +405,9 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
         };
 
         const parseAmount = (amt: string): { num: number; unit: string } | null => {
-          const trimmed = amt.trim();
+          let trimmed = amt.trim();
+          trimmed = trimmed.replace(/\s*\(.*?\)\s*/g, " ").trim();
+          trimmed = trimmed.replace(/,.*$/, "").trim();
           const mixedMatch = trimmed.match(/^(\d+)\s+(\d+\/\d+)\s*(.*)/);
           if (mixedMatch) {
             const num = parseFloat(mixedMatch[1]) + parseFraction(mixedMatch[2]);

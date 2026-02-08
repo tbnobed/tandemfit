@@ -11,8 +11,9 @@ export const partners = pgTable("partners", {
   calorieGoal: integer("calorie_goal").notNull().default(2000),
   streak: integer("streak").notNull().default(0),
   age: integer("age"),
-  heightCm: integer("height_cm"),
-  weightKg: integer("weight_kg"),
+  heightFeet: integer("height_feet"),
+  heightInches: integer("height_inches"),
+  weightLbs: integer("weight_lbs"),
   fitnessLevel: text("fitness_level").default("intermediate"),
   goal: text("goal").default("general fitness"),
 });

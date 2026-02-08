@@ -162,8 +162,9 @@ export async function registerRoutes(
     try {
       const partnerUpdateSchema = z.object({
         age: z.number().nullable().optional(),
-        heightCm: z.number().nullable().optional(),
-        weightKg: z.number().nullable().optional(),
+        heightFeet: z.number().nullable().optional(),
+        heightInches: z.number().nullable().optional(),
+        weightLbs: z.number().nullable().optional(),
         fitnessLevel: z.string().optional(),
         goal: z.string().optional(),
       });
@@ -198,12 +199,15 @@ export async function registerRoutes(
       const partner = await storage.getPartner(partnerId);
       if (!partner) return res.status(404).json({ error: "Partner not found" });
 
+      const heightStr = partner.heightFeet ? `${partner.heightFeet}'${partner.heightInches || 0}"` : "Not specified";
+      const weightStr = partner.weightLbs ? `${partner.weightLbs} lbs` : "Not specified";
+
       const prompt = `You are a certified personal trainer. Create a personalized workout plan for the following person:
 
 Name: ${partner.name}
 Age: ${partner.age || "Not specified"}
-Height: ${partner.heightCm ? partner.heightCm + " cm" : "Not specified"}
-Weight: ${partner.weightKg ? partner.weightKg + " kg" : "Not specified"}
+Height: ${heightStr}
+Weight: ${weightStr}
 Fitness Level: ${partner.fitnessLevel || "intermediate"}
 Goal: ${partner.goal || "general fitness"}
 Daily Calorie Goal: ${partner.calorieGoal}

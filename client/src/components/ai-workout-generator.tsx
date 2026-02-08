@@ -15,25 +15,7 @@ import {
 } from "lucide-react";
 import type { Partner, AiWorkoutPlan } from "@shared/schema";
 
-function cmToFeetInches(cm: number): { feet: number; inches: number } {
-  const totalInches = Math.round(cm / 2.54);
-  return { feet: Math.floor(totalInches / 12), inches: totalInches % 12 };
-}
-
-function feetInchesToCm(feet: number, inches: number): number {
-  return Math.round((feet * 12 + inches) * 2.54);
-}
-
-function kgToLbs(kg: number): number {
-  return Math.round(kg * 2.20462);
-}
-
-function lbsToKg(lbs: number): number {
-  return Math.round(lbs / 2.20462);
-}
-
-function formatHeight(cm: number): string {
-  const { feet, inches } = cmToFeetInches(cm);
+function formatHeight(feet: number, inches: number): string {
   return `${feet}'${inches}"`;
 }
 
@@ -140,12 +122,11 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
 
   const handleOpenProfile = () => {
     if (selectedPartner) {
-      const imperial = selectedPartner.heightCm ? cmToFeetInches(selectedPartner.heightCm) : { feet: 0, inches: 0 };
       setProfileForm({
         age: selectedPartner.age?.toString() || "",
-        heightFeet: selectedPartner.heightCm ? imperial.feet.toString() : "",
-        heightInches: selectedPartner.heightCm ? imperial.inches.toString() : "",
-        weightLbs: selectedPartner.weightKg ? kgToLbs(selectedPartner.weightKg).toString() : "",
+        heightFeet: selectedPartner.heightFeet?.toString() || "",
+        heightInches: selectedPartner.heightInches?.toString() || "",
+        weightLbs: selectedPartner.weightLbs?.toString() || "",
         fitnessLevel: selectedPartner.fitnessLevel || "intermediate",
         goal: selectedPartner.goal || "general fitness",
       });
@@ -155,16 +136,13 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
 
   const handleSaveProfile = () => {
     if (!selectedPartnerId) return;
-    const feet = profileForm.heightFeet ? parseInt(profileForm.heightFeet) : 0;
-    const inches = profileForm.heightInches ? parseInt(profileForm.heightInches) : 0;
-    const heightCm = (feet || inches) ? feetInchesToCm(feet, inches) : null;
-    const weightKg = profileForm.weightLbs ? lbsToKg(parseInt(profileForm.weightLbs)) : null;
     updateProfileMutation.mutate({
       id: selectedPartnerId,
       body: {
         age: profileForm.age ? parseInt(profileForm.age) : null,
-        heightCm,
-        weightKg,
+        heightFeet: profileForm.heightFeet ? parseInt(profileForm.heightFeet) : null,
+        heightInches: profileForm.heightInches ? parseInt(profileForm.heightInches) : null,
+        weightLbs: profileForm.weightLbs ? parseInt(profileForm.weightLbs) : null,
         fitnessLevel: profileForm.fitnessLevel,
         goal: profileForm.goal,
       },
@@ -238,11 +216,11 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
                 {selectedPartner.age && (
                   <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {selectedPartner.age} yrs</span>
                 )}
-                {selectedPartner.heightCm && (
-                  <span className="flex items-center gap-1"><Ruler className="w-3 h-3" /> {formatHeight(selectedPartner.heightCm)}</span>
+                {selectedPartner.heightFeet && (
+                  <span className="flex items-center gap-1"><Ruler className="w-3 h-3" /> {formatHeight(selectedPartner.heightFeet, selectedPartner.heightInches || 0)}</span>
                 )}
-                {selectedPartner.weightKg && (
-                  <span className="flex items-center gap-1"><Weight className="w-3 h-3" /> {kgToLbs(selectedPartner.weightKg)} lbs</span>
+                {selectedPartner.weightLbs && (
+                  <span className="flex items-center gap-1"><Weight className="w-3 h-3" /> {selectedPartner.weightLbs} lbs</span>
                 )}
                 {selectedPartner.fitnessLevel && (
                   <span className="flex items-center gap-1"><Target className="w-3 h-3" /> {selectedPartner.fitnessLevel}</span>

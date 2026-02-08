@@ -22,8 +22,9 @@ export async function seedDatabase() {
     calorieGoal: 2200,
     streak: 12,
     age: 28,
-    heightCm: 178,
-    weightKg: 82,
+    heightFeet: 5,
+    heightInches: 10,
+    weightLbs: 181,
     fitnessLevel: "intermediate",
     goal: "muscle building",
   });
@@ -35,8 +36,9 @@ export async function seedDatabase() {
     calorieGoal: 1900,
     streak: 12,
     age: 26,
-    heightCm: 165,
-    weightKg: 62,
+    heightFeet: 5,
+    heightInches: 5,
+    weightLbs: 137,
     fitnessLevel: "intermediate",
     goal: "toning and cardio",
   });

@@ -25,6 +25,8 @@ export interface IStorage {
 
   getActivities(): Promise<Activity[]>;
   createActivity(activity: InsertActivity): Promise<Activity>;
+  updateActivity(id: string, data: Partial<InsertActivity>): Promise<Activity | undefined>;
+  deleteActivity(id: string): Promise<void>;
 
   getMeals(): Promise<Meal[]>;
   createMeal(meal: InsertMeal): Promise<Meal>;
@@ -87,6 +89,15 @@ export class DatabaseStorage implements IStorage {
   async createActivity(activity: InsertActivity): Promise<Activity> {
     const [created] = await db.insert(activities).values(activity).returning();
     return created;
+  }
+
+  async updateActivity(id: string, data: Partial<InsertActivity>): Promise<Activity | undefined> {
+    const [updated] = await db.update(activities).set(data).where(eq(activities.id, id)).returning();
+    return updated;
+  }
+
+  async deleteActivity(id: string): Promise<void> {
+    await db.delete(activities).where(eq(activities.id, id));
   }
 
   async getMeals(): Promise<Meal[]> {

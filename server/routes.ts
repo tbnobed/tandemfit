@@ -5,6 +5,7 @@ import {
   insertWorkoutLogSchema,
   insertMealPlanSchema,
   insertMotivationMessageSchema,
+  insertActivitySchema,
 } from "@shared/schema";
 import { z } from "zod";
 import OpenAI from "openai";
@@ -32,6 +33,36 @@ export async function registerRoutes(
       res.json(activities);
     } catch (e) {
       res.status(500).json({ error: "Failed to fetch activities" });
+    }
+  });
+
+  app.post("/api/activities", async (req, res) => {
+    try {
+      const parsed = insertActivitySchema.parse(req.body);
+      const activity = await storage.createActivity(parsed);
+      res.json(activity);
+    } catch (e) {
+      res.status(400).json({ error: "Invalid activity data" });
+    }
+  });
+
+  app.patch("/api/activities/:id", async (req, res) => {
+    try {
+      const parsed = insertActivitySchema.partial().parse(req.body);
+      const updated = await storage.updateActivity(req.params.id, parsed);
+      if (!updated) return res.status(404).json({ error: "Activity not found" });
+      res.json(updated);
+    } catch (e) {
+      res.status(400).json({ error: "Invalid activity data" });
+    }
+  });
+
+  app.delete("/api/activities/:id", async (req, res) => {
+    try {
+      await storage.deleteActivity(req.params.id);
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to delete activity" });
     }
   });
 

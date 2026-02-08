@@ -110,6 +110,45 @@ export default function Home() {
     },
   });
 
+  const createActivityMutation = useMutation({
+    mutationFn: async (data: { name: string; type: string; duration: string; calories: number; difficulty: string; iconName: string }) => {
+      await apiRequest("POST", "/api/activities", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      toast({ title: "Activity created!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to create activity", variant: "destructive" });
+    },
+  });
+
+  const updateActivityMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<{ name: string; type: string; duration: string; calories: number; difficulty: string; iconName: string }> }) => {
+      await apiRequest("PATCH", `/api/activities/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      toast({ title: "Activity updated!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update activity", variant: "destructive" });
+    },
+  });
+
+  const deleteActivityMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/activities/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      toast({ title: "Activity deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete activity", variant: "destructive" });
+    },
+  });
+
   const updateProgressMutation = useMutation({
     mutationFn: async ({ id, progress }: { id: string; progress: number }) => {
       await apiRequest("PATCH", `/api/challenges/${id}`, { progress });
@@ -171,6 +210,10 @@ export default function Home() {
             partners={partners}
             onLogWorkout={(data) => logWorkoutMutation.mutate(data)}
             isLogging={logWorkoutMutation.isPending}
+            onCreateActivity={(data) => createActivityMutation.mutate(data)}
+            onUpdateActivity={(id, data) => updateActivityMutation.mutate({ id, data })}
+            onDeleteActivity={(id) => deleteActivityMutation.mutate(id)}
+            isSaving={createActivityMutation.isPending || updateActivityMutation.isPending}
           />
         )}
         {activeTab === "meals" && (

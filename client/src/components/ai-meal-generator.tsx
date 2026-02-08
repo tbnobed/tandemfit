@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Sparkles, Timer, Flame, ChevronRight, Loader2,
+  Sparkles, Timer, Flame, ChevronRight, ChevronDown, Loader2,
   UtensilsCrossed, Users, Trash2, ChefHat, ShoppingBasket, Plus
 } from "lucide-react";
 import type { AiMealPlan } from "@shared/schema";
@@ -53,6 +53,7 @@ const difficultyColor = (d: string) => {
 };
 
 export function AiMealGenerator() {
+  const [formExpanded, setFormExpanded] = useState(false);
   const [cuisine, setCuisine] = useState("");
   const [portions, setPortions] = useState("2");
   const [calorieRange, setCalorieRange] = useState("");
@@ -195,85 +196,101 @@ export function AiMealGenerator() {
       </div>
 
       <Card>
-        <CardContent className="p-5 space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">Cuisine Type</label>
-              <Select value={cuisine} onValueChange={setCuisine}>
-                <SelectTrigger data-testid="select-meal-cuisine">
-                  <SelectValue placeholder="Choose cuisine" />
-                </SelectTrigger>
-                <SelectContent>
-                  {cuisineOptions.map((c) => (
-                    <SelectItem key={c} value={c} data-testid={`option-cuisine-${c.toLowerCase().replace(/\s+/g, "-")}`}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">Portions</label>
-              <Select value={portions} onValueChange={setPortions}>
-                <SelectTrigger data-testid="select-meal-portions">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {portionOptions.map((p) => (
-                    <SelectItem key={p} value={p} data-testid={`option-portions-${p}`}>{p} {parseInt(p) === 1 ? "serving" : "servings"}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-foreground mb-2 block">Calorie Range (per serving)</label>
-            <Select value={calorieRange} onValueChange={setCalorieRange}>
-              <SelectTrigger data-testid="select-meal-calories">
-                <SelectValue placeholder="Select calorie range" />
-              </SelectTrigger>
-              <SelectContent>
-                {calorieRangeOptions.map((c) => (
-                  <SelectItem key={c} value={c} data-testid={`option-calrange-${c.split(" ")[0]}`}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-foreground mb-2 block">Dietary Restrictions</label>
-            <div className="flex gap-2 flex-wrap">
-              {dietaryRestrictionOptions.map((r) => (
-                <Badge
-                  key={r}
-                  variant={selectedRestrictions.includes(r) ? "default" : "outline"}
-                  className={`cursor-pointer toggle-elevate ${selectedRestrictions.includes(r) ? "toggle-elevated" : ""}`}
-                  onClick={() => toggleRestriction(r)}
-                  data-testid={`badge-restriction-${r.toLowerCase().replace(/\s+/g, "-")}`}
-                >
-                  {r}
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          <Button
-            className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-0"
-            onClick={handleGenerate}
-            disabled={!cuisine || !calorieRange || generateMutation.isPending}
-            data-testid="button-generate-meal"
+        <CardContent className="p-0">
+          <div
+            className="flex items-center justify-between gap-3 p-4 cursor-pointer flex-wrap"
+            onClick={() => setFormExpanded(!formExpanded)}
+            data-testid="button-toggle-recipe-form"
           >
-            {generateMutation.isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating recipe...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Generate Recipe
-              </>
-            )}
-          </Button>
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-emerald-500" />
+              <span className="font-semibold text-sm text-foreground">Configure Recipe</span>
+            </div>
+            <ChevronDown className={`w-5 h-5 text-muted-foreground flex-shrink-0 transition-transform ${formExpanded ? "rotate-180" : ""}`} />
+          </div>
+
+          {formExpanded && (
+            <div className="px-4 pb-4 space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Cuisine Type</label>
+                  <Select value={cuisine} onValueChange={setCuisine}>
+                    <SelectTrigger data-testid="select-meal-cuisine">
+                      <SelectValue placeholder="Choose cuisine" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cuisineOptions.map((c) => (
+                        <SelectItem key={c} value={c} data-testid={`option-cuisine-${c.toLowerCase().replace(/\s+/g, "-")}`}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">Portions</label>
+                  <Select value={portions} onValueChange={setPortions}>
+                    <SelectTrigger data-testid="select-meal-portions">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {portionOptions.map((p) => (
+                        <SelectItem key={p} value={p} data-testid={`option-portions-${p}`}>{p} {parseInt(p) === 1 ? "serving" : "servings"}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">Calorie Range (per serving)</label>
+                <Select value={calorieRange} onValueChange={setCalorieRange}>
+                  <SelectTrigger data-testid="select-meal-calories">
+                    <SelectValue placeholder="Select calorie range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {calorieRangeOptions.map((c) => (
+                      <SelectItem key={c} value={c} data-testid={`option-calrange-${c.split(" ")[0]}`}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">Dietary Restrictions</label>
+                <div className="flex gap-2 flex-wrap">
+                  {dietaryRestrictionOptions.map((r) => (
+                    <Badge
+                      key={r}
+                      variant={selectedRestrictions.includes(r) ? "default" : "outline"}
+                      className={`cursor-pointer toggle-elevate ${selectedRestrictions.includes(r) ? "toggle-elevated" : ""}`}
+                      onClick={() => toggleRestriction(r)}
+                      data-testid={`badge-restriction-${r.toLowerCase().replace(/\s+/g, "-")}`}
+                    >
+                      {r}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <Button
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-0"
+                onClick={handleGenerate}
+                disabled={!cuisine || !calorieRange || generateMutation.isPending}
+                data-testid="button-generate-meal"
+              >
+                {generateMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating recipe...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate Recipe
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

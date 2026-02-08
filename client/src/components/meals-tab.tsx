@@ -1,7 +1,7 @@
 import {
   Calendar, Utensils, Timer, Flame, Salad, Fish, Soup,
   Cookie, Egg, Sandwich, ChefHat, Check, Plus, Trash2, X,
-  ShoppingBasket, UtensilsCrossed, Pencil
+  ShoppingBasket, UtensilsCrossed, Pencil, ChevronDown, ShoppingCart
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -68,6 +68,7 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
   const [formTags, setFormTags] = useState("");
   const [formIngredients, setFormIngredients] = useState("");
   const [formSteps, setFormSteps] = useState("");
+  const [shoppingListExpanded, setShoppingListExpanded] = useState(false);
 
   const openViewDialog = (meal: Meal) => {
     setSelectedMeal(meal);
@@ -375,6 +376,82 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
           </div>
         </CardContent>
       </Card>
+
+      {(() => {
+        const plannedMeals = mealPlans
+          .filter(p => p.mealId)
+          .map(p => meals.find(m => m.id === p.mealId))
+          .filter((m): m is Meal => !!m);
+
+        const ingredientMap = new Map<string, string[]>();
+        plannedMeals.forEach(meal => {
+          if (!meal.ingredients) return;
+          try {
+            const parsed: Ingredient[] = JSON.parse(meal.ingredients);
+            parsed.forEach(ing => {
+              const key = ing.item.toLowerCase().trim();
+              if (!key) return;
+              const existing = ingredientMap.get(key) || [];
+              existing.push(ing.amount);
+              ingredientMap.set(key, existing);
+            });
+          } catch {}
+        });
+
+        const shoppingItems = Array.from(ingredientMap.entries())
+          .map(([item, amounts]) => ({
+            item: item.charAt(0).toUpperCase() + item.slice(1),
+            amounts,
+          }))
+          .sort((a, b) => a.item.localeCompare(b.item));
+
+        return (
+          <Card>
+            <CardContent className="p-0">
+              <div
+                className="flex items-center justify-between gap-3 p-4 cursor-pointer flex-wrap"
+                onClick={() => setShoppingListExpanded(!shoppingListExpanded)}
+                data-testid="button-toggle-shopping-list"
+              >
+                <div className="flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4 text-chart-3" />
+                  <span className="font-bold text-sm text-foreground">Weekly Shopping List</span>
+                  {shoppingItems.length > 0 && (
+                    <Badge variant="secondary">{shoppingItems.length} items</Badge>
+                  )}
+                </div>
+                <ChevronDown className={`w-5 h-5 text-muted-foreground flex-shrink-0 transition-transform ${shoppingListExpanded ? "rotate-180" : ""}`} />
+              </div>
+
+              {shoppingListExpanded && (
+                <div className="px-4 pb-4">
+                  {shoppingItems.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4" data-testid="text-no-shopping-items">
+                      Plan some meals for the week to generate your shopping list.
+                    </p>
+                  ) : (
+                    <div className="space-y-1.5" data-testid="shopping-list-items">
+                      {shoppingItems.map((item, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-3 p-2.5 bg-muted/40 rounded-md text-sm"
+                          data-testid={`shopping-item-${i}`}
+                        >
+                          <ShoppingBasket className="w-4 h-4 text-chart-3 flex-shrink-0" />
+                          <span className="font-medium text-foreground">{item.item}</span>
+                          <span className="text-muted-foreground ml-auto text-xs">
+                            {item.amounts.filter(Boolean).join(", ") || "as needed"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       <Dialog open={isFormOpen} onOpenChange={() => closeDialog()}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">

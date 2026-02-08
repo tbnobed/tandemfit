@@ -189,6 +189,18 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/ai-workout-plans/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteAiWorkoutPlan(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to delete plan" });
+    }
+  });
+
   app.post("/api/ai-workout-plans/generate", async (req, res) => {
     try {
       const { partnerId, focusArea } = req.body;

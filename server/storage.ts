@@ -165,6 +165,11 @@ export class DatabaseStorage implements IStorage {
     const [created] = await db.insert(aiWorkoutPlans).values(plan).returning();
     return created;
   }
+
+  async deleteAiWorkoutPlan(id: string): Promise<boolean> {
+    const result = await db.delete(aiWorkoutPlans).where(eq(aiWorkoutPlans.id, id)).returning();
+    return result.length > 0;
+  }
 }
 
 export const storage = new DatabaseStorage();

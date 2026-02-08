@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import {
   Sparkles, Dumbbell, Timer, Flame, Target, ChevronRight,
   RotateCcw, User, Ruler, Weight, Calendar, Loader2,
-  ArrowRight, Settings2
+  ArrowRight, Settings2, Trash2
 } from "lucide-react";
 import type { Partner, AiWorkoutPlan } from "@shared/schema";
 
@@ -170,6 +170,19 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
       toast({ title: "Could not load plan", variant: "destructive" });
     }
   };
+
+  const deletePlanMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/ai-workout-plans/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ai-workout-plans", selectedPartnerId] });
+      toast({ title: "Plan deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete plan", variant: "destructive" });
+    },
+  });
 
   return (
     <div className="space-y-6">
@@ -358,7 +371,7 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
               >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <h4 className="font-semibold text-sm text-foreground truncate">{plan.planName}</h4>
                       <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
                         <Badge variant="secondary">{plan.focusArea}</Badge>
@@ -366,7 +379,17 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
                         <span>~{plan.totalCalories} cal</span>
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      data-testid={`button-delete-plan-${plan.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deletePlanMutation.mutate(plan.id);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4 text-muted-foreground" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

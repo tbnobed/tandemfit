@@ -113,11 +113,29 @@ export async function registerRoutes(
 
   app.patch("/api/meal-plans/:id", async (req, res) => {
     try {
-      const plan = await storage.updateMealPlan(req.params.id, req.body);
+      const parsed = insertMealPlanSchema.partial().extend({ completed: z.boolean().optional() }).parse(req.body);
+      const plan = await storage.updateMealPlan(req.params.id, parsed);
       if (!plan) return res.status(404).json({ error: "Plan not found" });
       res.json(plan);
     } catch (e) {
+      if (e instanceof z.ZodError) {
+        return res.status(400).json({ error: e.errors });
+      }
       res.status(500).json({ error: "Failed to update meal plan" });
+    }
+  });
+
+  app.patch("/api/meals/:id", async (req, res) => {
+    try {
+      const parsed = insertMealSchema.partial().parse(req.body);
+      const meal = await storage.updateMeal(req.params.id, parsed);
+      if (!meal) return res.status(404).json({ error: "Meal not found" });
+      res.json(meal);
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        return res.status(400).json({ error: e.errors });
+      }
+      res.status(500).json({ error: "Failed to update meal" });
     }
   });
 

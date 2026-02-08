@@ -110,6 +110,32 @@ export default function Home() {
     },
   });
 
+  const createMealMutation = useMutation({
+    mutationFn: async (data: { name: string; prepTime: string; calories: number; tags: string[]; difficulty: string; iconName: string; cookTime?: string; ingredients?: string; steps?: string }) => {
+      await apiRequest("POST", "/api/meals", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/meals"] });
+      toast({ title: "Recipe added!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to create recipe", variant: "destructive" });
+    },
+  });
+
+  const updateMealMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<{ name: string; prepTime: string; calories: number; tags: string[]; difficulty: string; iconName: string; cookTime?: string; ingredients?: string; steps?: string }> }) => {
+      await apiRequest("PATCH", `/api/meals/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/meals"] });
+      toast({ title: "Recipe updated!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update recipe", variant: "destructive" });
+    },
+  });
+
   const deleteMealMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/meals/${id}`);
@@ -251,9 +277,12 @@ export default function Home() {
             onToggleMealComplete={(planId, completed) =>
               toggleMealCompleteMutation.mutate({ planId, completed })
             }
+            onCreateMeal={(data) => createMealMutation.mutate(data)}
+            onUpdateMeal={(id, data) => updateMealMutation.mutate({ id, data })}
             onDeleteMeal={(id) => deleteMealMutation.mutate(id)}
             onDeleteMealPlan={(id) => deleteMealPlanMutation.mutate(id)}
             isPlanning={planMealMutation.isPending}
+            isSaving={createMealMutation.isPending || updateMealMutation.isPending}
           />
         )}
         {activeTab === "challenges" && (

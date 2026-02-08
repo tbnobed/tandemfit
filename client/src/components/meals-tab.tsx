@@ -1,13 +1,15 @@
 import {
-  Calendar, Utensils, Timer, Flame, BarChart3, Salad, Fish, Soup,
+  Calendar, Utensils, Timer, Flame, Salad, Fish, Soup,
   Cookie, Egg, Sandwich, ChefHat, Check, Plus, Trash2, X,
-  ShoppingBasket, UtensilsCrossed
+  ShoppingBasket, UtensilsCrossed, Pencil
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import type { Meal, MealPlan } from "@shared/schema";
 import { AiMealGenerator } from "./ai-meal-generator";
@@ -25,6 +27,7 @@ function getMealIcon(name: string) {
   return mealIconMap[name] || Utensils;
 }
 
+const ICON_OPTIONS = ["Utensils", "Salad", "Fish", "Soup", "Cookie", "Egg", "Sandwich", "ChefHat"];
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MEAL_TYPES = ["breakfast", "lunch", "dinner"] as const;
 const MEAL_TYPE_LABELS: Record<string, string> = { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner" };
@@ -34,15 +37,140 @@ interface MealsTabProps {
   mealPlans: MealPlan[];
   onPlanMeal: (data: { mealId: string; dayOfWeek: number; mealType: string }) => void;
   onToggleMealComplete: (planId: string, completed: boolean) => void;
+  onCreateMeal: (data: { name: string; prepTime: string; calories: number; tags: string[]; difficulty: string; iconName: string; cookTime?: string; ingredients?: string; steps?: string }) => void;
+  onUpdateMeal: (id: string, data: Partial<{ name: string; prepTime: string; calories: number; tags: string[]; difficulty: string; iconName: string; cookTime?: string; ingredients?: string; steps?: string }>) => void;
   onDeleteMeal: (id: string) => void;
   onDeleteMealPlan: (id: string) => void;
   isPlanning: boolean;
+  isSaving: boolean;
 }
 
-export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, onDeleteMeal, onDeleteMealPlan, isPlanning }: MealsTabProps) {
+type DialogMode = "view" | "edit" | "create" | "picker";
+
+interface SlotTarget {
+  dayOfWeek: number;
+  mealType: string;
+}
+
+export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, onCreateMeal, onUpdateMeal, onDeleteMeal, onDeleteMealPlan, isPlanning, isSaving }: MealsTabProps) {
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
+  const [dialogMode, setDialogMode] = useState<DialogMode>("view");
   const [selectedDay, setSelectedDay] = useState<string>("");
   const [selectedMealType, setSelectedMealType] = useState<string>("dinner");
+  const [slotTarget, setSlotTarget] = useState<SlotTarget | null>(null);
+
+  const [formName, setFormName] = useState("");
+  const [formPrepTime, setFormPrepTime] = useState("");
+  const [formCookTime, setFormCookTime] = useState("");
+  const [formCalories, setFormCalories] = useState("");
+  const [formDifficulty, setFormDifficulty] = useState("Easy");
+  const [formIcon, setFormIcon] = useState("Utensils");
+  const [formTags, setFormTags] = useState("");
+  const [formIngredients, setFormIngredients] = useState("");
+  const [formSteps, setFormSteps] = useState("");
+
+  const openViewDialog = (meal: Meal) => {
+    setSelectedMeal(meal);
+    setDialogMode("view");
+    setSelectedDay("");
+    setSelectedMealType("dinner");
+    setSlotTarget(null);
+  };
+
+  const openCreateDialog = (slot?: SlotTarget) => {
+    setSelectedMeal(null);
+    setDialogMode("create");
+    setSlotTarget(slot || null);
+    setFormName("");
+    setFormPrepTime("15 min");
+    setFormCookTime("");
+    setFormCalories("");
+    setFormDifficulty("Easy");
+    setFormIcon("Utensils");
+    setFormTags("");
+    setFormIngredients("");
+    setFormSteps("");
+  };
+
+  const openEditDialog = (meal: Meal) => {
+    setSelectedMeal(meal);
+    setDialogMode("edit");
+    setFormName(meal.name);
+    setFormPrepTime(meal.prepTime);
+    setFormCookTime(meal.cookTime || "");
+    setFormCalories(String(meal.calories));
+    setFormDifficulty(meal.difficulty);
+    setFormIcon(meal.iconName);
+    setFormTags((meal.tags || []).join(", "));
+
+    let ingredientText = "";
+    let stepsText = "";
+    try {
+      if (meal.ingredients) {
+        const parsed: Ingredient[] = JSON.parse(meal.ingredients);
+        ingredientText = parsed.map(i => `${i.amount} - ${i.item}`).join("\n");
+      }
+      if (meal.steps) {
+        const parsed: string[] = JSON.parse(meal.steps);
+        stepsText = parsed.join("\n");
+      }
+    } catch {}
+    setFormIngredients(ingredientText);
+    setFormSteps(stepsText);
+  };
+
+  const openPickerDialog = (slot: SlotTarget) => {
+    setDialogMode("picker");
+    setSlotTarget(slot);
+    setSelectedMeal(null);
+  };
+
+  const closeDialog = () => {
+    setSelectedMeal(null);
+    setDialogMode("view");
+    setSlotTarget(null);
+  };
+
+  const parseIngredientsText = (text: string): Ingredient[] => {
+    if (!text.trim()) return [];
+    return text.split("\n").filter(l => l.trim()).map(line => {
+      const dashIdx = line.indexOf("-");
+      if (dashIdx > 0) {
+        return { amount: line.slice(0, dashIdx).trim(), item: line.slice(dashIdx + 1).trim() };
+      }
+      return { amount: "", item: line.trim() };
+    });
+  };
+
+  const parseStepsText = (text: string): string[] => {
+    if (!text.trim()) return [];
+    return text.split("\n").filter(l => l.trim());
+  };
+
+  const handleSave = () => {
+    if (!formName.trim() || !formCalories) return;
+    const ingredients = parseIngredientsText(formIngredients);
+    const steps = parseStepsText(formSteps);
+    const tags = formTags.split(",").map(t => t.trim()).filter(Boolean);
+    const data = {
+      name: formName.trim(),
+      prepTime: formPrepTime || "15 min",
+      calories: parseInt(formCalories),
+      tags,
+      difficulty: formDifficulty,
+      iconName: formIcon,
+      cookTime: formCookTime || undefined,
+      ingredients: ingredients.length > 0 ? JSON.stringify(ingredients) : undefined,
+      steps: steps.length > 0 ? JSON.stringify(steps) : undefined,
+    };
+
+    if (dialogMode === "edit" && selectedMeal) {
+      onUpdateMeal(selectedMeal.id, data);
+    } else {
+      onCreateMeal(data);
+    }
+    closeDialog();
+  };
 
   const handlePlan = () => {
     if (!selectedMeal || !selectedDay) return;
@@ -51,9 +179,17 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
       dayOfWeek: parseInt(selectedDay),
       mealType: selectedMealType,
     });
-    setSelectedMeal(null);
-    setSelectedDay("");
-    setSelectedMealType("dinner");
+    closeDialog();
+  };
+
+  const handlePickMeal = (meal: Meal) => {
+    if (!slotTarget) return;
+    onPlanMeal({
+      mealId: meal.id,
+      dayOfWeek: slotTarget.dayOfWeek,
+      mealType: slotTarget.mealType,
+    });
+    closeDialog();
   };
 
   const getMealForSlot = (dayIndex: number, mealType: string) => {
@@ -69,13 +205,22 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
     return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
   };
 
+  const isFormOpen = dialogMode === "view" && !!selectedMeal || dialogMode === "edit" || dialogMode === "create" || dialogMode === "picker";
+
   return (
     <div className="space-y-8 min-w-0">
       <AiMealGenerator />
 
       <div className="border-t pt-8">
-        <h2 className="text-xl sm:text-2xl font-bold text-foreground" data-testid="text-meals-title">Meal Planning & Recipes</h2>
-        <p className="text-sm text-muted-foreground mt-1">Delicious, healthy meals to cook together</p>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground" data-testid="text-meals-title">Meal Planning & Recipes</h2>
+            <p className="text-sm text-muted-foreground mt-1">Delicious, healthy meals to cook together</p>
+          </div>
+          <Button onClick={() => openCreateDialog()} data-testid="button-add-recipe">
+            <Plus className="w-4 h-4 mr-1" /> Add Recipe
+          </Button>
+        </div>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
@@ -84,8 +229,8 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
           return (
             <Card
               key={meal.id}
-              className="hover-elevate active-elevate-2 cursor-pointer transition-all"
-              onClick={() => setSelectedMeal(meal)}
+              className="hover-elevate cursor-pointer"
+              onClick={() => openViewDialog(meal)}
               data-testid={`card-meal-${meal.id}`}
             >
               <CardContent className="p-5">
@@ -103,19 +248,32 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
                       ))}
                     </div>
                   </div>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    data-testid={`button-delete-meal-${meal.id}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteMeal(meal.id);
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4 text-muted-foreground" />
-                  </Button>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      data-testid={`button-edit-meal-${meal.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditDialog(meal);
+                      }}
+                    >
+                      <Pencil className="w-4 h-4 text-muted-foreground" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      data-testid={`button-delete-meal-${meal.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteMeal(meal.id);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4 text-muted-foreground" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                   <span className="flex items-center gap-1">
                     <Timer className="w-3 h-3" /> {meal.prepTime}
                   </span>
@@ -166,7 +324,13 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
                             }`}
                             onClick={() => {
                               if (planned) {
-                                onToggleMealComplete(planned.plan.id, !planned.plan.completed);
+                                if (planned.meal) {
+                                  openViewDialog(planned.meal);
+                                } else {
+                                  onToggleMealComplete(planned.plan.id, !planned.plan.completed);
+                                }
+                              } else {
+                                openPickerDialog({ dayOfWeek: dayIdx, mealType });
                               }
                             }}
                             data-testid={`mealplan-${mealType}-${dayIdx}`}
@@ -209,117 +373,265 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
         </CardContent>
       </Card>
 
-      <Dialog open={!!selectedMeal} onOpenChange={() => setSelectedMeal(null)}>
+      <Dialog open={isFormOpen} onOpenChange={() => closeDialog()}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle data-testid="text-meal-dialog-title">{selectedMeal?.name}</DialogTitle>
-            <DialogDescription>
-              <span className="flex items-center gap-3 flex-wrap">
-                <span className="flex items-center gap-1"><Timer className="w-3 h-3" /> Prep: {selectedMeal?.prepTime}</span>
-                {selectedMeal?.cookTime && (
-                  <span className="flex items-center gap-1"><ChefHat className="w-3 h-3" /> Cook: {selectedMeal.cookTime}</span>
+          {dialogMode === "picker" && slotTarget && (
+            <>
+              <DialogHeader>
+                <DialogTitle data-testid="text-picker-title">
+                  Choose a Recipe for {DAYS[slotTarget.dayOfWeek]} {MEAL_TYPE_LABELS[slotTarget.mealType]}
+                </DialogTitle>
+                <DialogDescription>Pick from your recipe collection or create a new one</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                {meals.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">No recipes yet. Create one first!</p>
                 )}
-                <span className="flex items-center gap-1"><Flame className="w-3 h-3" /> {selectedMeal?.calories} cal</span>
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${difficultyColor(selectedMeal?.difficulty || "Easy")}`}>
-                  {selectedMeal?.difficulty}
-                </span>
-              </span>
-            </DialogDescription>
-          </DialogHeader>
-
-          {(() => {
-            let parsedIngredients: Ingredient[] | null = null;
-            let parsedSteps: string[] | null = null;
-            try {
-              if (selectedMeal?.ingredients) parsedIngredients = JSON.parse(selectedMeal.ingredients);
-              if (selectedMeal?.steps) parsedSteps = JSON.parse(selectedMeal.steps);
-            } catch {}
-
-            if (!parsedIngredients && !parsedSteps) return null;
-
-            return (
-              <div className="space-y-4 pt-2">
-                {parsedIngredients && parsedIngredients.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold text-sm text-foreground mb-2 flex items-center gap-2">
-                      <ShoppingBasket className="w-4 h-4 text-emerald-500" />
-                      Ingredients
-                    </h4>
-                    <div className="space-y-1.5">
-                      {parsedIngredients.map((ing, i) => (
-                        <div key={i} className="flex items-center gap-3 p-2 bg-muted/40 rounded-md text-sm" data-testid={`meal-ingredient-${i}`}>
-                          <span className="font-medium text-foreground min-w-[80px]">{ing.amount}</span>
-                          <span className="text-muted-foreground">{ing.item}</span>
-                        </div>
-                      ))}
+                {meals.map((meal) => {
+                  const Icon = getMealIcon(meal.iconName);
+                  return (
+                    <div
+                      key={meal.id}
+                      className="flex items-center gap-3 p-3 rounded-md cursor-pointer hover-elevate border border-border"
+                      onClick={() => handlePickMeal(meal)}
+                      data-testid={`picker-meal-${meal.id}`}
+                    >
+                      <div className="w-9 h-9 rounded-md bg-chart-3/10 flex items-center justify-center flex-shrink-0">
+                        <Icon className="w-5 h-5 text-chart-3" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm text-foreground truncate">{meal.name}</p>
+                        <p className="text-xs text-muted-foreground">{meal.calories} cal &middot; {meal.prepTime}</p>
+                      </div>
                     </div>
-                  </div>
-                )}
-                {parsedSteps && parsedSteps.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold text-sm text-foreground mb-2 flex items-center gap-2">
-                      <UtensilsCrossed className="w-4 h-4 text-emerald-500" />
-                      Instructions
-                    </h4>
-                    <div className="space-y-2">
-                      {parsedSteps.map((step, i) => (
-                        <div key={i} className="flex gap-3 p-3 bg-muted/40 rounded-md" data-testid={`meal-step-${i}`}>
-                          <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
-                            {i + 1}
-                          </div>
-                          <p className="text-sm text-foreground leading-relaxed">{step}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  );
+                })}
               </div>
-            );
-          })()}
+              <Button variant="outline" className="w-full" onClick={() => openCreateDialog(slotTarget)} data-testid="button-create-from-picker">
+                <Plus className="w-4 h-4 mr-1" /> Create New Recipe
+              </Button>
+            </>
+          )}
 
-          <div className="space-y-4 pt-2 border-t">
-            <label className="text-sm font-medium text-foreground block">Add to weekly plan</label>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Day</label>
-                <Select value={selectedDay} onValueChange={setSelectedDay}>
-                  <SelectTrigger data-testid="select-meal-day">
-                    <SelectValue placeholder="Pick a day" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DAYS.map((day, idx) => (
-                      <SelectItem key={idx} value={String(idx)} data-testid={`option-day-${day.toLowerCase()}`}>
-                        {day}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {dialogMode === "view" && selectedMeal && (
+            <>
+              <DialogHeader>
+                <DialogTitle data-testid="text-meal-dialog-title">{selectedMeal.name}</DialogTitle>
+                <DialogDescription>
+                  <span className="flex items-center gap-3 flex-wrap">
+                    <span className="flex items-center gap-1"><Timer className="w-3 h-3" /> Prep: {selectedMeal.prepTime}</span>
+                    {selectedMeal.cookTime && (
+                      <span className="flex items-center gap-1"><ChefHat className="w-3 h-3" /> Cook: {selectedMeal.cookTime}</span>
+                    )}
+                    <span className="flex items-center gap-1"><Flame className="w-3 h-3" /> {selectedMeal.calories} cal</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${difficultyColor(selectedMeal.difficulty)}`}>
+                      {selectedMeal.difficulty}
+                    </span>
+                  </span>
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => openEditDialog(selectedMeal)} data-testid="button-edit-recipe">
+                  <Pencil className="w-3 h-3 mr-1" /> Edit
+                </Button>
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Meal</label>
-                <Select value={selectedMealType} onValueChange={setSelectedMealType}>
-                  <SelectTrigger data-testid="select-meal-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MEAL_TYPES.map((mt) => (
-                      <SelectItem key={mt} value={mt} data-testid={`option-mealtype-${mt}`}>
-                        {MEAL_TYPE_LABELS[mt]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+              {(() => {
+                let parsedIngredients: Ingredient[] | null = null;
+                let parsedSteps: string[] | null = null;
+                try {
+                  if (selectedMeal.ingredients) parsedIngredients = JSON.parse(selectedMeal.ingredients);
+                  if (selectedMeal.steps) parsedSteps = JSON.parse(selectedMeal.steps);
+                } catch {}
+
+                if (!parsedIngredients && !parsedSteps) return null;
+
+                return (
+                  <div className="space-y-4 pt-2">
+                    {parsedIngredients && parsedIngredients.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-sm text-foreground mb-2 flex items-center gap-2">
+                          <ShoppingBasket className="w-4 h-4 text-emerald-500" />
+                          Ingredients
+                        </h4>
+                        <div className="space-y-1.5">
+                          {parsedIngredients.map((ing, i) => (
+                            <div key={i} className="flex items-center gap-3 p-2 bg-muted/40 rounded-md text-sm" data-testid={`meal-ingredient-${i}`}>
+                              <span className="font-medium text-foreground min-w-[80px]">{ing.amount}</span>
+                              <span className="text-muted-foreground">{ing.item}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {parsedSteps && parsedSteps.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-sm text-foreground mb-2 flex items-center gap-2">
+                          <UtensilsCrossed className="w-4 h-4 text-emerald-500" />
+                          Instructions
+                        </h4>
+                        <div className="space-y-2">
+                          {parsedSteps.map((step, i) => (
+                            <div key={i} className="flex gap-3 p-3 bg-muted/40 rounded-md" data-testid={`meal-step-${i}`}>
+                              <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+                                {i + 1}
+                              </div>
+                              <p className="text-sm text-foreground leading-relaxed">{step}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              <div className="space-y-4 pt-2 border-t">
+                <label className="text-sm font-medium text-foreground block">Add to weekly plan</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Day</label>
+                    <Select value={selectedDay} onValueChange={setSelectedDay}>
+                      <SelectTrigger data-testid="select-meal-day">
+                        <SelectValue placeholder="Pick a day" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DAYS.map((day, idx) => (
+                          <SelectItem key={idx} value={String(idx)} data-testid={`option-day-${day.toLowerCase()}`}>
+                            {day}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Meal</label>
+                    <Select value={selectedMealType} onValueChange={setSelectedMealType}>
+                      <SelectTrigger data-testid="select-meal-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MEAL_TYPES.map((mt) => (
+                          <SelectItem key={mt} value={mt} data-testid={`option-mealtype-${mt}`}>
+                            {MEAL_TYPE_LABELS[mt]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={handlePlan}
+                  disabled={!selectedDay || isPlanning}
+                  data-testid="button-confirm-plan"
+                >
+                  {isPlanning ? "Planning..." : "Add to Meal Plan"}
+                </Button>
               </div>
-            </div>
-            <Button
-              className="w-full"
-              onClick={handlePlan}
-              disabled={!selectedDay || isPlanning}
-              data-testid="button-confirm-plan"
-            >
-              {isPlanning ? "Planning..." : "Add to Meal Plan"}
-            </Button>
-          </div>
+            </>
+          )}
+
+          {(dialogMode === "create" || dialogMode === "edit") && (
+            <>
+              <DialogHeader>
+                <DialogTitle data-testid="text-form-title">
+                  {dialogMode === "edit" ? "Edit Recipe" : "New Recipe"}
+                </DialogTitle>
+                <DialogDescription>
+                  {dialogMode === "edit" ? "Update the recipe details" : "Add a new recipe to your collection"}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1 block">Name</label>
+                  <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Recipe name" data-testid="input-recipe-name" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Prep Time</label>
+                    <Input value={formPrepTime} onChange={(e) => setFormPrepTime(e.target.value)} placeholder="e.g. 15 min" data-testid="input-prep-time" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Cook Time</label>
+                    <Input value={formCookTime} onChange={(e) => setFormCookTime(e.target.value)} placeholder="e.g. 30 min" data-testid="input-cook-time" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Calories</label>
+                    <Input type="number" value={formCalories} onChange={(e) => setFormCalories(e.target.value)} placeholder="e.g. 450" data-testid="input-calories" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Difficulty</label>
+                    <Select value={formDifficulty} onValueChange={setFormDifficulty}>
+                      <SelectTrigger data-testid="select-difficulty">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Easy">Easy</SelectItem>
+                        <SelectItem value="Medium">Medium</SelectItem>
+                        <SelectItem value="Hard">Hard</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Icon</label>
+                    <Select value={formIcon} onValueChange={setFormIcon}>
+                      <SelectTrigger data-testid="select-icon">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ICON_OPTIONS.map((icon) => {
+                          const IC = getMealIcon(icon);
+                          return (
+                            <SelectItem key={icon} value={icon}>
+                              <span className="flex items-center gap-2"><IC className="w-4 h-4" /> {icon}</span>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Tags</label>
+                    <Input value={formTags} onChange={(e) => setFormTags(e.target.value)} placeholder="e.g. Italian, Pasta" data-testid="input-tags" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1 block">Ingredients (one per line, format: amount - item)</label>
+                  <Textarea
+                    value={formIngredients}
+                    onChange={(e) => setFormIngredients(e.target.value)}
+                    placeholder={"2 cups - flour\n1 tsp - salt\n3 tbsp - olive oil"}
+                    rows={4}
+                    data-testid="input-ingredients"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1 block">Steps (one per line)</label>
+                  <Textarea
+                    value={formSteps}
+                    onChange={(e) => setFormSteps(e.target.value)}
+                    placeholder={"Preheat oven to 375F\nMix dry ingredients\nAdd wet ingredients and stir"}
+                    rows={4}
+                    data-testid="input-steps"
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={handleSave}
+                  disabled={!formName.trim() || !formCalories || isSaving}
+                  data-testid="button-save-recipe"
+                >
+                  {isSaving ? "Saving..." : dialogMode === "edit" ? "Save Changes" : "Add Recipe"}
+                </Button>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

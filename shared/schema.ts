@@ -10,6 +10,23 @@ export const partners = pgTable("partners", {
   weeklyGoal: integer("weekly_goal").notNull().default(5),
   calorieGoal: integer("calorie_goal").notNull().default(2000),
   streak: integer("streak").notNull().default(0),
+  age: integer("age"),
+  heightCm: integer("height_cm"),
+  weightKg: integer("weight_kg"),
+  fitnessLevel: text("fitness_level").default("intermediate"),
+  goal: text("goal").default("general fitness"),
+});
+
+export const aiWorkoutPlans = pgTable("ai_workout_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partnerId: varchar("partner_id").notNull(),
+  planName: text("plan_name").notNull(),
+  exercises: text("exercises").notNull(),
+  totalDuration: text("total_duration").notNull(),
+  totalCalories: integer("total_calories").notNull(),
+  difficulty: text("difficulty").notNull(),
+  focusArea: text("focus_area").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const workoutLogs = pgTable("workout_logs", {
@@ -76,6 +93,7 @@ export const motivationMessages = pgTable("motivation_messages", {
 });
 
 export const insertPartnerSchema = createInsertSchema(partners).omit({ id: true });
+export const insertAiWorkoutPlanSchema = createInsertSchema(aiWorkoutPlans).omit({ id: true });
 export const insertWorkoutLogSchema = createInsertSchema(workoutLogs).omit({ id: true });
 export const insertActivitySchema = createInsertSchema(activities).omit({ id: true });
 export const insertMealSchema = createInsertSchema(meals).omit({ id: true });
@@ -86,6 +104,8 @@ export const insertMotivationMessageSchema = createInsertSchema(motivationMessag
 
 export type Partner = typeof partners.$inferSelect;
 export type InsertPartner = z.infer<typeof insertPartnerSchema>;
+export type AiWorkoutPlan = typeof aiWorkoutPlans.$inferSelect;
+export type InsertAiWorkoutPlan = z.infer<typeof insertAiWorkoutPlanSchema>;
 export type WorkoutLog = typeof workoutLogs.$inferSelect;
 export type InsertWorkoutLog = z.infer<typeof insertWorkoutLogSchema>;
 export type Activity = typeof activities.$inferSelect;

@@ -7,7 +7,8 @@ import {
   type Challenge, type InsertChallenge,
   type Badge, type InsertBadge,
   type MotivationMessage, type InsertMotivationMessage,
-  partners, workoutLogs, activities, meals, mealPlans, challenges, badges, motivationMessages
+  type AiWorkoutPlan, type InsertAiWorkoutPlan,
+  partners, workoutLogs, activities, meals, mealPlans, challenges, badges, motivationMessages, aiWorkoutPlans
 } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -41,6 +42,10 @@ export interface IStorage {
 
   getMessages(): Promise<MotivationMessage[]>;
   createMessage(message: InsertMotivationMessage): Promise<MotivationMessage>;
+
+  updatePartner(id: string, data: Partial<InsertPartner>): Promise<Partner | undefined>;
+  getAiWorkoutPlans(partnerId: string): Promise<AiWorkoutPlan[]>;
+  createAiWorkoutPlan(plan: InsertAiWorkoutPlan): Promise<AiWorkoutPlan>;
 }
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -144,6 +149,20 @@ export class DatabaseStorage implements IStorage {
 
   async createMessage(message: InsertMotivationMessage): Promise<MotivationMessage> {
     const [created] = await db.insert(motivationMessages).values(message).returning();
+    return created;
+  }
+
+  async updatePartner(id: string, data: Partial<InsertPartner>): Promise<Partner | undefined> {
+    const [updated] = await db.update(partners).set(data).where(eq(partners.id, id)).returning();
+    return updated;
+  }
+
+  async getAiWorkoutPlans(partnerId: string): Promise<AiWorkoutPlan[]> {
+    return db.select().from(aiWorkoutPlans).where(eq(aiWorkoutPlans.partnerId, partnerId)).orderBy(desc(aiWorkoutPlans.createdAt));
+  }
+
+  async createAiWorkoutPlan(plan: InsertAiWorkoutPlan): Promise<AiWorkoutPlan> {
+    const [created] = await db.insert(aiWorkoutPlans).values(plan).returning();
     return created;
   }
 }

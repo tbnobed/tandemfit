@@ -18,6 +18,7 @@ import type {
   Badge,
   MotivationMessage,
   WorkoutLog,
+  AiWorkoutPlan,
 } from "@shared/schema";
 
 export default function Home() {

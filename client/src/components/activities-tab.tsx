@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import type { Activity, Partner } from "@shared/schema";
+import { AiWorkoutGenerator } from "./ai-workout-generator";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Mountain, Waves, PersonStanding, Bike, Zap, Music, Dumbbell,
@@ -59,8 +60,10 @@ export function ActivitiesTab({ activities, partners, onLogWorkout, isLogging }:
   };
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="space-y-8">
+      <AiWorkoutGenerator partners={partners} />
+
+      <div className="border-t pt-8">
         <h2 className="text-xl sm:text-2xl font-bold text-foreground" data-testid="text-activities-title">Activity Suggestions</h2>
         <p className="text-sm text-muted-foreground mt-1">Fun ways to stay active together and separately</p>
       </div>

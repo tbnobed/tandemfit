@@ -7,6 +7,10 @@ import {
   insertMotivationMessageSchema,
 } from "@shared/schema";
 import { z } from "zod";
+import OpenAI from "openai";
+
+// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function registerRoutes(
   httpServer: Server,
@@ -151,6 +155,109 @@ export async function registerRoutes(
         return res.status(400).json({ error: e.errors });
       }
       res.status(500).json({ error: "Failed to log workout" });
+    }
+  });
+
+  app.patch("/api/partners/:id", async (req, res) => {
+    try {
+      const partnerUpdateSchema = z.object({
+        age: z.number().nullable().optional(),
+        heightCm: z.number().nullable().optional(),
+        weightKg: z.number().nullable().optional(),
+        fitnessLevel: z.string().optional(),
+        goal: z.string().optional(),
+      });
+      const parsed = partnerUpdateSchema.parse(req.body);
+      const updated = await storage.updatePartner(req.params.id, parsed);
+      if (!updated) return res.status(404).json({ error: "Partner not found" });
+      res.json(updated);
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        return res.status(400).json({ error: e.errors });
+      }
+      res.status(500).json({ error: "Failed to update partner" });
+    }
+  });
+
+  app.get("/api/ai-workout-plans/:partnerId", async (req, res) => {
+    try {
+      const plans = await storage.getAiWorkoutPlans(req.params.partnerId);
+      res.json(plans);
+    } catch (e) {
+      res.status(500).json({ error: "Failed to fetch AI workout plans" });
+    }
+  });
+
+  app.post("/api/ai-workout-plans/generate", async (req, res) => {
+    try {
+      const { partnerId, focusArea } = req.body;
+      if (!partnerId || !focusArea) {
+        return res.status(400).json({ error: "partnerId and focusArea are required" });
+      }
+
+      const partner = await storage.getPartner(partnerId);
+      if (!partner) return res.status(404).json({ error: "Partner not found" });
+
+      const prompt = `You are a certified personal trainer. Create a personalized workout plan for the following person:
+
+Name: ${partner.name}
+Age: ${partner.age || "Not specified"}
+Height: ${partner.heightCm ? partner.heightCm + " cm" : "Not specified"}
+Weight: ${partner.weightKg ? partner.weightKg + " kg" : "Not specified"}
+Fitness Level: ${partner.fitnessLevel || "intermediate"}
+Goal: ${partner.goal || "general fitness"}
+Daily Calorie Goal: ${partner.calorieGoal}
+Focus Area: ${focusArea}
+
+Generate a complete workout plan with 4-6 exercises. For each exercise include the name, sets, reps (or duration for timed exercises), rest period, and a brief form tip.
+
+Respond with JSON in this exact format:
+{
+  "planName": "descriptive plan name",
+  "totalDuration": "estimated total time like 35 min",
+  "totalCalories": estimated calories burned as number,
+  "difficulty": "Easy" or "Medium" or "Hard",
+  "exercises": [
+    {
+      "name": "exercise name",
+      "sets": number,
+      "reps": "rep count or duration",
+      "restSeconds": number,
+      "formTip": "brief technique tip",
+      "muscleGroup": "primary muscle group"
+    }
+  ]
+}`;
+
+      // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 45000);
+      try {
+        var response = await openai.chat.completions.create({
+          model: "gpt-5-mini",
+          messages: [{ role: "user", content: prompt }],
+          response_format: { type: "json_object" },
+        }, { signal: controller.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      const result = JSON.parse(response.choices[0].message.content || "{}");
+
+      const saved = await storage.createAiWorkoutPlan({
+        partnerId,
+        planName: result.planName || "Custom Workout",
+        exercises: JSON.stringify(result.exercises || []),
+        totalDuration: result.totalDuration || "30 min",
+        totalCalories: result.totalCalories || 300,
+        difficulty: result.difficulty || "Medium",
+        focusArea,
+      });
+
+      res.json({ ...saved, exercises: result.exercises });
+    } catch (e: any) {
+      console.error("AI workout generation error:", e);
+      res.status(500).json({ error: "Failed to generate workout plan. " + (e.message || "") });
     }
   });
 

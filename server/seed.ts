@@ -21,6 +21,11 @@ export async function seedDatabase() {
     weeklyGoal: 5,
     calorieGoal: 2200,
     streak: 12,
+    age: 28,
+    heightCm: 178,
+    weightKg: 82,
+    fitnessLevel: "intermediate",
+    goal: "muscle building",
   });
 
   const kristina = await storage.createPartner({
@@ -29,6 +34,11 @@ export async function seedDatabase() {
     weeklyGoal: 4,
     calorieGoal: 1900,
     streak: 12,
+    age: 26,
+    heightCm: 165,
+    weightKg: 62,
+    fitnessLevel: "intermediate",
+    goal: "toning and cardio",
   });
 
   await Promise.all([

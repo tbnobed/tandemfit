@@ -185,7 +185,7 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
   });
 
   const addToActivitiesMutation = useMutation({
-    mutationFn: async (plan: { planName: string; totalDuration: string; totalCalories: number; difficulty: string; focusArea: string }) => {
+    mutationFn: async (plan: { planName: string; exercises: Exercise[]; totalDuration: string; totalCalories: number; difficulty: string; focusArea: string }) => {
       await apiRequest("POST", "/api/activities", {
         name: plan.planName,
         type: plan.focusArea,
@@ -193,6 +193,7 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
         calories: plan.totalCalories,
         difficulty: plan.difficulty,
         iconName: "Dumbbell",
+        exercises: JSON.stringify(plan.exercises),
       });
     },
     onSuccess: () => {
@@ -425,8 +426,11 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
                       data-testid={`button-add-past-plan-${plan.id}`}
                       onClick={(e) => {
                         e.stopPropagation();
+                        let exercises: Exercise[] = [];
+                        try { exercises = JSON.parse(plan.exercises) as Exercise[]; } catch {}
                         addToActivitiesMutation.mutate({
                           planName: plan.planName,
+                          exercises,
                           totalDuration: plan.totalDuration,
                           totalCalories: plan.totalCalories,
                           difficulty: plan.difficulty,

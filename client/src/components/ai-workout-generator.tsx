@@ -164,6 +164,8 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
         difficulty: plan.difficulty,
         focusArea: plan.focusArea,
       });
+      setPlanExpanded(true);
+      setExpandedExercise(null);
     } catch {
       toast({ title: "Could not load plan", variant: "destructive" });
     }

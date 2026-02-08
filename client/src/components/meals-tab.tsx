@@ -439,9 +439,6 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
                         >
                           <ShoppingBasket className="w-4 h-4 text-chart-3 flex-shrink-0" />
                           <span className="font-medium text-foreground">{item.item}</span>
-                          <span className="text-muted-foreground ml-auto text-xs">
-                            {item.amounts.filter(Boolean).join(", ") || "as needed"}
-                          </span>
                         </div>
                       ))}
                     </div>

@@ -423,9 +423,8 @@ Respond with JSON in this exact format:
   ]
 }`;
 
-      // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 45000);
+      const timeout = setTimeout(() => controller.abort(), 90000);
       try {
         var response = await openai.chat.completions.create({
           model: "gpt-5-mini",
@@ -518,7 +517,7 @@ Respond with JSON in this exact format:
 }`;
 
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 45000);
+      const timeout = setTimeout(() => controller.abort(), 90000);
       try {
         var response = await openai.chat.completions.create({
           model: "gpt-5-mini",

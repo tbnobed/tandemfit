@@ -383,13 +383,22 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
           .map(p => meals.find(m => m.id === p.mealId))
           .filter((m): m is Meal => !!m);
 
+        const cleanItemName = (raw: string) => {
+          let name = raw.split(",")[0].trim();
+          name = name.replace(/\s*\(.*?\)\s*/g, "");
+          name = name.replace(/\b(fresh|freshly|washed|chopped|diced|minced|sliced|grated|peeled|crushed|dried|ground|roughly|finely|thinly|cubed|shredded|julienned|halved|quartered|trimmed|deseeded|seeded|pitted|cored|zested|melted|softened|toasted|roasted|cooked|uncooked|raw|boneless|skinless|frozen|thawed|canned|drained|packed|sifted|beaten|whisked|room temperature|at room temperature|to taste|optional|for garnish|for serving|as needed)\b/gi, "");
+          name = name.replace(/\s{2,}/g, " ").trim();
+          return name;
+        };
+
         const ingredientMap = new Map<string, string[]>();
         plannedMeals.forEach(meal => {
           if (!meal.ingredients) return;
           try {
             const parsed: Ingredient[] = JSON.parse(meal.ingredients);
             parsed.forEach(ing => {
-              const key = ing.item.toLowerCase().trim();
+              const cleaned = cleanItemName(ing.item);
+              const key = cleaned.toLowerCase().trim();
               if (!key) return;
               const existing = ingredientMap.get(key) || [];
               existing.push(ing.amount);

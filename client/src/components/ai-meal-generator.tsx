@@ -66,6 +66,7 @@ export function AiMealGenerator() {
     difficulty: string;
     ingredients: Ingredient[];
     steps: string[];
+    aiRecipeId?: string;
   } | null>(null);
   const [recipeExpanded, setRecipeExpanded] = useState(true);
 
@@ -90,6 +91,7 @@ export function AiMealGenerator() {
         difficulty: data.difficulty,
         ingredients: data.ingredients,
         steps: data.steps,
+        aiRecipeId: data.id,
       });
       setRecipeExpanded(true);
       queryClient.invalidateQueries({ queryKey: ["/api/ai-meal-plans"] });
@@ -114,7 +116,10 @@ export function AiMealGenerator() {
   });
 
   const addToMealsMutation = useMutation({
-    mutationFn: async (data: { name: string; prepTime: string; calories: number; difficulty: string; tags: string[] }) => {
+    mutationFn: async (data: {
+      name: string; prepTime: string; calories: number; difficulty: string; tags: string[];
+      cookTime?: string; ingredients?: string; steps?: string; aiRecipeId?: string;
+    }) => {
       await apiRequest("POST", "/api/meals", {
         name: data.name,
         prepTime: data.prepTime,
@@ -122,10 +127,17 @@ export function AiMealGenerator() {
         difficulty: data.difficulty,
         tags: data.tags,
         iconName: "ChefHat",
+        cookTime: data.cookTime,
+        ingredients: data.ingredients,
+        steps: data.steps,
       });
+      if (data.aiRecipeId) {
+        await apiRequest("DELETE", `/api/ai-meal-plans/${data.aiRecipeId}`);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/meals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ai-meal-plans"] });
       toast({ title: "Recipe added to your meal collection!" });
     },
     onError: () => {
@@ -162,6 +174,7 @@ export function AiMealGenerator() {
         difficulty: plan.difficulty,
         ingredients,
         steps,
+        aiRecipeId: plan.id,
       });
       setRecipeExpanded(true);
     } catch {
@@ -344,7 +357,12 @@ export function AiMealGenerator() {
                       calories: generatedRecipe.caloriesPerServing,
                       difficulty: generatedRecipe.difficulty,
                       tags: [cuisine, ...(selectedRestrictions.length > 0 ? selectedRestrictions.slice(0, 2) : [])],
+                      cookTime: generatedRecipe.cookTime,
+                      ingredients: JSON.stringify(generatedRecipe.ingredients),
+                      steps: JSON.stringify(generatedRecipe.steps),
+                      aiRecipeId: generatedRecipe.aiRecipeId,
                     });
+                    setGeneratedRecipe(null);
                   }}
                   disabled={addToMealsMutation.isPending}
                   data-testid="button-add-to-meals"
@@ -357,7 +375,7 @@ export function AiMealGenerator() {
                   ) : (
                     <>
                       <Plus className="w-4 h-4 mr-2" />
-                      Add to Meal Plan
+                      Add to Meals
                     </>
                   )}
                 </Button>
@@ -401,6 +419,10 @@ export function AiMealGenerator() {
                             calories: recipe.caloriesPerServing,
                             difficulty: recipe.difficulty,
                             tags: [recipe.cuisine, ...(recipe.dietaryRestrictions || []).slice(0, 2)],
+                            cookTime: recipe.cookTime,
+                            ingredients: recipe.ingredients,
+                            steps: recipe.steps,
+                            aiRecipeId: recipe.id,
                           });
                         }}
                       >

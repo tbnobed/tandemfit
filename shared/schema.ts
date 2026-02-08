@@ -57,6 +57,9 @@ export const meals = pgTable("meals", {
   tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
   difficulty: text("difficulty").notNull().default("Easy"),
   iconName: text("icon_name").notNull().default("Utensils"),
+  cookTime: text("cook_time"),
+  ingredients: text("ingredients"),
+  steps: text("steps"),
 });
 
 export const mealPlans = pgTable("meal_plans", {

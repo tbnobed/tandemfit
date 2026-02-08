@@ -1,6 +1,7 @@
 import {
   Calendar, Utensils, Timer, Flame, BarChart3, Salad, Fish, Soup,
-  Cookie, Egg, Sandwich, ChefHat, Check, Plus, Trash2, X
+  Cookie, Egg, Sandwich, ChefHat, Check, Plus, Trash2, X,
+  ShoppingBasket, UtensilsCrossed
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState } from "react";
 import type { Meal, MealPlan } from "@shared/schema";
 import { AiMealGenerator } from "./ai-meal-generator";
+
+interface Ingredient {
+  item: string;
+  amount: string;
+}
 
 const mealIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Salad, Fish, Soup, Cookie, Egg, Sandwich, Utensils, ChefHat,
@@ -183,16 +189,76 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
       </Card>
 
       <Dialog open={!!selectedMeal} onOpenChange={() => setSelectedMeal(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Plan: {selectedMeal?.name}</DialogTitle>
+            <DialogTitle data-testid="text-meal-dialog-title">{selectedMeal?.name}</DialogTitle>
             <DialogDescription>
-              {selectedMeal?.prepTime} prep, {selectedMeal?.calories} calories
+              <span className="flex items-center gap-3 flex-wrap">
+                <span className="flex items-center gap-1"><Timer className="w-3 h-3" /> Prep: {selectedMeal?.prepTime}</span>
+                {selectedMeal?.cookTime && (
+                  <span className="flex items-center gap-1"><ChefHat className="w-3 h-3" /> Cook: {selectedMeal.cookTime}</span>
+                )}
+                <span className="flex items-center gap-1"><Flame className="w-3 h-3" /> {selectedMeal?.calories} cal</span>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${difficultyColor(selectedMeal?.difficulty || "Easy")}`}>
+                  {selectedMeal?.difficulty}
+                </span>
+              </span>
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 pt-2">
+
+          {(() => {
+            let parsedIngredients: Ingredient[] | null = null;
+            let parsedSteps: string[] | null = null;
+            try {
+              if (selectedMeal?.ingredients) parsedIngredients = JSON.parse(selectedMeal.ingredients);
+              if (selectedMeal?.steps) parsedSteps = JSON.parse(selectedMeal.steps);
+            } catch {}
+
+            if (!parsedIngredients && !parsedSteps) return null;
+
+            return (
+              <div className="space-y-4 pt-2">
+                {parsedIngredients && parsedIngredients.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-sm text-foreground mb-2 flex items-center gap-2">
+                      <ShoppingBasket className="w-4 h-4 text-emerald-500" />
+                      Ingredients
+                    </h4>
+                    <div className="space-y-1.5">
+                      {parsedIngredients.map((ing, i) => (
+                        <div key={i} className="flex items-center gap-3 p-2 bg-muted/40 rounded-md text-sm" data-testid={`meal-ingredient-${i}`}>
+                          <span className="font-medium text-foreground min-w-[80px]">{ing.amount}</span>
+                          <span className="text-muted-foreground">{ing.item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {parsedSteps && parsedSteps.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-sm text-foreground mb-2 flex items-center gap-2">
+                      <UtensilsCrossed className="w-4 h-4 text-emerald-500" />
+                      Instructions
+                    </h4>
+                    <div className="space-y-2">
+                      {parsedSteps.map((step, i) => (
+                        <div key={i} className="flex gap-3 p-3 bg-muted/40 rounded-md" data-testid={`meal-step-${i}`}>
+                          <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+                            {i + 1}
+                          </div>
+                          <p className="text-sm text-foreground leading-relaxed">{step}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          <div className="space-y-4 pt-2 border-t">
             <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">Which day?</label>
+              <label className="text-sm font-medium text-foreground mb-2 block">Add to weekly plan</label>
               <Select value={selectedDay} onValueChange={setSelectedDay}>
                 <SelectTrigger data-testid="select-meal-day">
                   <SelectValue placeholder="Pick a day" />

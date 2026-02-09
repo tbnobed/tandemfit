@@ -393,6 +393,25 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/workout-logs/:id", async (req, res) => {
+    try {
+      const updated = await storage.updateWorkoutLog(req.params.id, req.body);
+      if (!updated) return res.status(404).json({ error: "Workout log not found" });
+      res.json(updated);
+    } catch (e) {
+      res.status(500).json({ error: "Failed to update workout log" });
+    }
+  });
+
+  app.delete("/api/workout-logs/:id", async (req, res) => {
+    try {
+      await storage.deleteWorkoutLog(req.params.id);
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to delete workout log" });
+    }
+  });
+
   app.patch("/api/partners/:id", async (req, res) => {
     try {
       const partnerUpdateSchema = z.object({

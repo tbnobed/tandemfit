@@ -107,6 +107,8 @@ interface ActivitiesTabProps {
   onCreateActivity: (data: { name: string; type: string; duration: string; calories: number; difficulty: string; iconName: string; workoutType: string }) => void;
   onUpdateActivity: (id: string, data: Partial<{ name: string; type: string; duration: string; calories: number; difficulty: string; iconName: string; workoutType: string }>) => void;
   onDeleteActivity: (id: string) => void;
+  onUpdateWorkoutLog: (id: string, data: { activityName?: string; duration?: number; caloriesBurned?: number }) => void;
+  onDeleteWorkoutLog: (id: string) => void;
   isSaving: boolean;
 }
 
@@ -137,7 +139,7 @@ function parseExercises(activity: Activity): WorkoutExercise[] | null {
   return null;
 }
 
-export function ActivitiesTab({ activities, partners, activePartner, workoutLogs, onLogWorkout, isLogging, onCreateActivity, onUpdateActivity, onDeleteActivity, isSaving }: ActivitiesTabProps) {
+export function ActivitiesTab({ activities, partners, activePartner, workoutLogs, onLogWorkout, isLogging, onCreateActivity, onUpdateActivity, onDeleteActivity, onUpdateWorkoutLog, onDeleteWorkoutLog, isSaving }: ActivitiesTabProps) {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [detailActivity, setDetailActivity] = useState<Activity | null>(null);
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
@@ -149,6 +151,10 @@ export function ActivitiesTab({ activities, partners, activePartner, workoutLogs
   const [recordType, setRecordType] = useState<string>("Free Weights");
   const [recordDuration, setRecordDuration] = useState<string>("60");
   const [recordName, setRecordName] = useState<string>("");
+  const [editingLog, setEditingLog] = useState<WorkoutLog | null>(null);
+  const [editLogName, setEditLogName] = useState("");
+  const [editLogDuration, setEditLogDuration] = useState("");
+  const [editLogType, setEditLogType] = useState("Other");
 
   const visibleActivities = activities.filter((a) => {
     if (a.type === "Individual" && a.partnerId && activePartner) {
@@ -353,7 +359,7 @@ export function ActivitiesTab({ activities, partners, activePartner, workoutLogs
                 {myLogs.slice(0, 5).map((log) => (
                   <div
                     key={log.id}
-                    className="flex items-center justify-between gap-3 p-3 bg-muted/40 rounded-md"
+                    className="flex items-center justify-between gap-3 p-3 bg-muted/40 rounded-md group"
                     data-testid={`log-entry-${log.id}`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -367,13 +373,38 @@ export function ActivitiesTab({ activities, partners, activePartner, workoutLogs
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0 text-xs">
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <Timer className="w-3 h-3" />{log.duration}m
-                      </span>
-                      <span className="flex items-center gap-1 font-semibold text-foreground">
-                        <FireIcon className="w-3 h-3 text-orange-500" />{log.caloriesBurned}
-                      </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <Timer className="w-3 h-3" />{log.duration}m
+                        </span>
+                        <span className="flex items-center gap-1 font-semibold text-foreground">
+                          <FireIcon className="w-3 h-3 text-orange-500" />{log.caloriesBurned}
+                        </span>
+                      </div>
+                      <div className="flex gap-0.5 invisible group-hover:visible">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingLog(log);
+                            setEditLogName(log.activityName);
+                            setEditLogDuration(String(log.duration));
+                            setEditLogType(guessWorkoutType(log.activityName));
+                          }}
+                          data-testid={`button-edit-log-${log.id}`}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => onDeleteWorkoutLog(log.id)}
+                          data-testid={`button-delete-log-${log.id}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -618,6 +649,83 @@ export function ActivitiesTab({ activities, partners, activePartner, workoutLogs
                 data-testid="button-confirm-record"
               >
                 {isLogging ? "Recording..." : "Record Workout"}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Workout Log Dialog */}
+      <Dialog open={!!editingLog} onOpenChange={() => setEditingLog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Workout</DialogTitle>
+            <DialogDescription>Update workout details</DialogDescription>
+          </DialogHeader>
+          {editingLog && activePartner && (
+            <div className="space-y-4 pt-2">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">Workout Name</label>
+                <Input
+                  value={editLogName}
+                  onChange={(e) => setEditLogName(e.target.value)}
+                  data-testid="input-edit-log-name"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">Workout Type</label>
+                <Select value={editLogType} onValueChange={setEditLogType}>
+                  <SelectTrigger data-testid="select-edit-log-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WORKOUT_TYPES.map(t => (
+                      <SelectItem key={t} value={t}>
+                        {t} (MET: {MET_VALUES[t]})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">Duration (minutes)</label>
+                <Input
+                  type="number"
+                  value={editLogDuration}
+                  onChange={(e) => setEditLogDuration(e.target.value)}
+                  min="1"
+                  data-testid="input-edit-log-duration"
+                />
+              </div>
+              <Card className="border-primary/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <FireIcon className="w-5 h-5 text-orange-500" />
+                      <span className="text-sm font-medium text-foreground">Updated Calories</span>
+                    </div>
+                    <span className="text-2xl font-bold text-primary" data-testid="text-edit-log-calories">
+                      {calculateCalories(activePartner, editLogType, parseInt(editLogDuration) || 0)}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+              <Button
+                className="w-full"
+                onClick={() => {
+                  const dur = parseInt(editLogDuration);
+                  if (!editLogName.trim() || isNaN(dur) || dur <= 0) return;
+                  const cal = calculateCalories(activePartner, editLogType, dur);
+                  onUpdateWorkoutLog(editingLog.id, {
+                    activityName: editLogName.trim(),
+                    duration: dur,
+                    caloriesBurned: cal,
+                  });
+                  setEditingLog(null);
+                }}
+                data-testid="button-save-edit-log"
+              >
+                Save Changes
               </Button>
             </div>
           )}

@@ -108,6 +108,33 @@ export default function Home() {
     },
   });
 
+  const updateWorkoutLogMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { activityName?: string; duration?: number; caloriesBurned?: number } }) => {
+      await apiRequest("PATCH", `/api/workout-logs/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/workout-logs"] });
+      toast({ title: "Workout updated!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update workout", variant: "destructive" });
+    },
+  });
+
+  const deleteWorkoutLogMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/workout-logs/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/workout-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/partners"] });
+      toast({ title: "Workout deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete workout", variant: "destructive" });
+    },
+  });
+
   const planMealMutation = useMutation({
     mutationFn: async (data: { mealId: string; dayOfWeek: number; mealType: string }) => {
       await apiRequest("POST", "/api/meal-plans", data);
@@ -310,6 +337,8 @@ export default function Home() {
             onCreateActivity={(data) => createActivityMutation.mutate(data)}
             onUpdateActivity={(id, data) => updateActivityMutation.mutate({ id, data })}
             onDeleteActivity={(id) => deleteActivityMutation.mutate(id)}
+            onUpdateWorkoutLog={(id, data) => updateWorkoutLogMutation.mutate({ id, data })}
+            onDeleteWorkoutLog={(id) => deleteWorkoutLogMutation.mutate(id)}
             isSaving={createActivityMutation.isPending || updateActivityMutation.isPending}
           />
         )}

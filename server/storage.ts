@@ -23,6 +23,8 @@ export interface IStorage {
 
   getWorkoutLogs(): Promise<WorkoutLog[]>;
   createWorkoutLog(log: InsertWorkoutLog): Promise<WorkoutLog>;
+  updateWorkoutLog(id: string, data: Partial<InsertWorkoutLog>): Promise<WorkoutLog | undefined>;
+  deleteWorkoutLog(id: string): Promise<void>;
 
   getActivities(): Promise<Activity[]>;
   createActivity(activity: InsertActivity): Promise<Activity>;
@@ -87,6 +89,15 @@ export class DatabaseStorage implements IStorage {
   async createWorkoutLog(log: InsertWorkoutLog): Promise<WorkoutLog> {
     const [created] = await db.insert(workoutLogs).values(log).returning();
     return created;
+  }
+
+  async updateWorkoutLog(id: string, data: Partial<InsertWorkoutLog>): Promise<WorkoutLog | undefined> {
+    const [updated] = await db.update(workoutLogs).set(data).where(eq(workoutLogs.id, id)).returning();
+    return updated;
+  }
+
+  async deleteWorkoutLog(id: string): Promise<void> {
+    await db.delete(workoutLogs).where(eq(workoutLogs.id, id));
   }
 
   async getActivities(): Promise<Activity[]> {

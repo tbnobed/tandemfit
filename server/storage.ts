@@ -20,7 +20,7 @@ export interface IStorage {
   getPartners(): Promise<Partner[]>;
   getPartner(id: string): Promise<Partner | undefined>;
   createPartner(partner: InsertPartner): Promise<Partner>;
-  updatePartnerStreak(id: string, streak: number): Promise<Partner | undefined>;
+  updatePartnerStreak(id: string, streak: number, lastWorkoutDate?: string): Promise<Partner | undefined>;
 
   getWorkoutLogs(): Promise<WorkoutLog[]>;
   createWorkoutLog(log: InsertWorkoutLog): Promise<WorkoutLog>;
@@ -81,8 +81,10 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async updatePartnerStreak(id: string, streak: number): Promise<Partner | undefined> {
-    const [updated] = await db.update(partners).set({ streak }).where(eq(partners.id, id)).returning();
+  async updatePartnerStreak(id: string, streak: number, lastWorkoutDate?: string): Promise<Partner | undefined> {
+    const data: Record<string, any> = { streak };
+    if (lastWorkoutDate) data.lastWorkoutDate = lastWorkoutDate;
+    const [updated] = await db.update(partners).set(data).where(eq(partners.id, id)).returning();
     return updated;
   }
 

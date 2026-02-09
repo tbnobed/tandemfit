@@ -10,6 +10,7 @@ export const partners = pgTable("partners", {
   weeklyGoal: integer("weekly_goal").notNull().default(5),
   calorieGoal: integer("calorie_goal").notNull().default(2000),
   streak: integer("streak").notNull().default(0),
+  lastWorkoutDate: text("last_workout_date"),
   age: integer("age"),
   heightFeet: integer("height_feet"),
   heightInches: integer("height_inches"),

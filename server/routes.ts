@@ -410,7 +410,15 @@ export async function registerRoutes(
       let effortPoints = 0;
       if (partner) {
         effortPoints = calculateEffortPoints(parsed.caloriesBurned, parsed.duration, partner);
-        await storage.updatePartnerStreak(partner.id, partner.streak + 1);
+
+        const today = new Date().toISOString().split("T")[0];
+        const lastDate = partner.lastWorkoutDate;
+
+        if (lastDate !== today) {
+          const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+          const newStreak = lastDate === yesterday ? partner.streak + 1 : 1;
+          await storage.updatePartnerStreak(partner.id, newStreak, today);
+        }
       }
 
       const log = await storage.createWorkoutLog({ ...parsed, effortPoints });

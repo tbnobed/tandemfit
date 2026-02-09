@@ -152,8 +152,8 @@ export function DashboardTab({
         </CardContent>
       </Card>
 
-      {activePartner && (() => {
-          const partner = activePartner;
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {partners.map((partner) => {
           const weeklyCompleted = getWeeklyCompletedCount(workoutLogs, partner.id);
           const weeklyWorkoutList = getWeeklyWorkouts(workoutLogs, partner.id);
           const todayCalories = getTodayCalories(workoutLogs, partner.id);
@@ -384,7 +384,8 @@ export function DashboardTab({
               </div>
             </div>
           );
-        })()}
+        })}
+      </div>
 
       <Card>
         <CardContent className="p-5">

@@ -345,6 +345,8 @@ export async function registerRoutes(
         weightLbs: z.number().nullable().optional(),
         fitnessLevel: z.string().optional(),
         goal: z.string().optional(),
+        weeklyGoal: z.number().optional(),
+        calorieGoal: z.number().optional(),
       });
       const parsed = partnerUpdateSchema.parse(req.body);
       const updated = await storage.updatePartner(req.params.id, parsed);

@@ -236,6 +236,19 @@ export default function Home() {
     },
   });
 
+  const updateGoalsMutation = useMutation({
+    mutationFn: async ({ partnerId, weeklyGoal, calorieGoal }: { partnerId: string; weeklyGoal: number; calorieGoal: number }) => {
+      await apiRequest("PATCH", `/api/partners/${partnerId}`, { weeklyGoal, calorieGoal });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/partners"] });
+      toast({ title: "Goals updated!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update goals", variant: "destructive" });
+    },
+  });
+
   const showSplash = !partnersLoading && partners.length > 0 && !activePartnerId;
 
   if (showSplash) {
@@ -280,7 +293,9 @@ export default function Home() {
             messages={messages}
             workoutLogs={workoutLogs}
             onSendMessage={(msg) => sendMessageMutation.mutate(msg)}
+            onUpdateGoals={(partnerId, weeklyGoal, calorieGoal) => updateGoalsMutation.mutate({ partnerId, weeklyGoal, calorieGoal })}
             isSending={sendMessageMutation.isPending}
+            isUpdatingGoals={updateGoalsMutation.isPending}
           />
         )}
         {activeTab === "activities" && (

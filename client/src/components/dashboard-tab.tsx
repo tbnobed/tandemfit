@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Trophy, Zap, Target, Star, Send, Dumbbell, Clock, RotateCcw } from "lucide-react";
+import { Heart, MessageCircle, Trophy, Zap, Target, Star, Send, Dumbbell, Clock, RotateCcw, Pencil, Check } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,9 @@ interface DashboardTabProps {
   messages: MotivationMessage[];
   workoutLogs: WorkoutLog[];
   onSendMessage: (message: string) => void;
+  onUpdateGoals: (partnerId: string, weeklyGoal: number, calorieGoal: number) => void;
   isSending: boolean;
+  isUpdatingGoals: boolean;
 }
 
 function getWeeklyCompletedCount(logs: WorkoutLog[], partnerId: string): number {
@@ -63,10 +65,15 @@ export function DashboardTab({
   messages,
   workoutLogs,
   onSendMessage,
+  onUpdateGoals,
   isSending,
+  isUpdatingGoals,
 }: DashboardTabProps) {
   const [newMessage, setNewMessage] = useState("");
   const [flippedPartner, setFlippedPartner] = useState<string | null>(null);
+  const [editingGoals, setEditingGoals] = useState<string | null>(null);
+  const [editWeekly, setEditWeekly] = useState(0);
+  const [editCalorie, setEditCalorie] = useState(0);
 
   const handleSend = () => {
     if (newMessage.trim()) {
@@ -202,42 +209,114 @@ export function DashboardTab({
                             <p className="text-xs text-muted-foreground">This Week</p>
                           </div>
                         </div>
-                        <Dumbbell className={`w-5 h-5 ${isBlue ? "text-blue-400" : "text-pink-400"}`} />
-                      </div>
-                      <div className="space-y-4">
-                        <div>
-                          <div className="flex justify-between gap-2 text-sm mb-2">
-                            <span className="font-medium text-foreground">Weekly Workouts</span>
-                            <span className={`font-bold ${isBlue ? "text-blue-600 dark:text-blue-400" : "text-pink-600 dark:text-pink-400"}`}>
-                              {weeklyCompleted}/{partner.weeklyGoal}
-                              {weeklyPercent >= 100 ? " (Done!)" : ""}
-                            </span>
-                          </div>
-                          <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-700 ${
-                                isBlue ? "bg-gradient-to-r from-blue-500 to-blue-600" : "bg-gradient-to-r from-pink-500 to-pink-600"
-                              }`}
-                              style={{ width: `${weeklyPercent}%` }}
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <div className="flex justify-between gap-2 text-sm mb-2">
-                            <span className="font-medium text-foreground">Calories Burned Today</span>
-                            <span className={`font-bold ${isBlue ? "text-blue-600 dark:text-blue-400" : "text-pink-600 dark:text-pink-400"}`}>
-                              {todayCalories}/{partner.calorieGoal}
-                            </span>
-                          </div>
-                          <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-700"
-                              style={{ width: `${caloriePercent}%` }}
-                            />
-                          </div>
+                        <div className="flex items-center gap-1">
+                          {editingGoals !== partner.id && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingGoals(partner.id);
+                                setEditWeekly(partner.weeklyGoal);
+                                setEditCalorie(partner.calorieGoal);
+                              }}
+                              data-testid={`button-edit-goals-${partner.name.toLowerCase()}`}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                          )}
+                          <Dumbbell className={`w-5 h-5 ${isBlue ? "text-blue-400" : "text-pink-400"}`} />
                         </div>
                       </div>
-                      <p className="text-xs text-muted-foreground text-center mt-4">Tap to see workouts</p>
+
+                      {editingGoals === partner.id ? (
+                        <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Weekly Workout Goal</label>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={14}
+                              value={editWeekly}
+                              onChange={(e) => setEditWeekly(parseInt(e.target.value) || 1)}
+                              data-testid={`input-weekly-goal-${partner.name.toLowerCase()}`}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Daily Calorie Burn Goal</label>
+                            <Input
+                              type="number"
+                              min={100}
+                              step={50}
+                              value={editCalorie}
+                              onChange={(e) => setEditCalorie(parseInt(e.target.value) || 100)}
+                              data-testid={`input-calorie-goal-${partner.name.toLowerCase()}`}
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              className="flex-1"
+                              disabled={isUpdatingGoals}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onUpdateGoals(partner.id, editWeekly, editCalorie);
+                                setEditingGoals(null);
+                              }}
+                              data-testid={`button-save-goals-${partner.name.toLowerCase()}`}
+                            >
+                              <Check className="w-4 h-4 mr-1" />
+                              Save Goals
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingGoals(null);
+                              }}
+                              data-testid={`button-cancel-goals-${partner.name.toLowerCase()}`}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="space-y-4">
+                            <div>
+                              <div className="flex justify-between gap-2 text-sm mb-2">
+                                <span className="font-medium text-foreground">Weekly Workouts</span>
+                                <span className={`font-bold ${isBlue ? "text-blue-600 dark:text-blue-400" : "text-pink-600 dark:text-pink-400"}`} data-testid={`text-weekly-progress-${partner.name.toLowerCase()}`}>
+                                  {weeklyCompleted}/{partner.weeklyGoal}
+                                  {weeklyPercent >= 100 ? " (Done!)" : ""}
+                                </span>
+                              </div>
+                              <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-700 ${
+                                    isBlue ? "bg-gradient-to-r from-blue-500 to-blue-600" : "bg-gradient-to-r from-pink-500 to-pink-600"
+                                  }`}
+                                  style={{ width: `${weeklyPercent}%` }}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <div className="flex justify-between gap-2 text-sm mb-2">
+                                <span className="font-medium text-foreground">Calories Burned Today</span>
+                                <span className={`font-bold ${isBlue ? "text-blue-600 dark:text-blue-400" : "text-pink-600 dark:text-pink-400"}`} data-testid={`text-calorie-progress-${partner.name.toLowerCase()}`}>
+                                  {todayCalories}/{partner.calorieGoal}
+                                </span>
+                              </div>
+                              <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-700"
+                                  style={{ width: `${caloriePercent}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground text-center mt-4">Tap to see workouts</p>
+                        </>
+                      )}
                     </CardContent>
                   </Card>
                 </div>

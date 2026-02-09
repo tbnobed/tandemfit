@@ -46,6 +46,14 @@ A couples fitness tracking app for Obed and Kristina with shared progress tracki
 - 2026-02-08: Added AI workout generator with OpenAI integration, metabolic profiles for partners, exercise plan generation with reps/sets/form tips
 - 2026-02-08: Initial build with all MVP features, PostgreSQL database, seed data
 
+## Docker Deployment
+- `Dockerfile` - Multi-stage build (builder + runner), copies full node_modules from builder for drizzle-kit access
+- `docker-compose.yml` - PostgreSQL 16 + app service, DB health checks, env var configuration
+- `docker-entrypoint.sh` - Waits for DB readiness, runs `drizzle-kit push` for schema, then starts app
+- `deploy.sh` - One-command Ubuntu deployment script (installs Docker if needed, validates .env, builds and starts)
+- `.env.example` - Template for required env vars (POSTGRES_USER/PASSWORD/DB, OPENAI_API_KEY, APP_PORT)
+- Database auto-seeds partner data (Obed + Kristina) on first run via server/seed.ts
+
 ## User Preferences
 - Personalized for Obed (blue, 28yo, 178cm, 82kg, muscle building) and Kristina (pink, 26yo, 165cm, 62kg, toning and cardio)
 - Dark mode support via theme toggle

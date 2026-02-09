@@ -184,6 +184,16 @@ export function AiWorkoutGenerator({ partners, activePartner }: AiWorkoutGenerat
     },
   });
 
+  const focusToWorkoutType = (focus: string): string => {
+    const lower = focus.toLowerCase();
+    if (lower.includes("cardio")) return "Cardio";
+    if (lower.includes("hiit")) return "HIIT";
+    if (lower.includes("yoga") || lower.includes("flex")) return "Yoga";
+    if (lower.includes("core")) return "Core";
+    if (lower.includes("full body")) return "Bodyweight";
+    return "Free Weights";
+  };
+
   const addToActivitiesMutation = useMutation({
     mutationFn: async (plan: { planName: string; exercises: Exercise[]; totalDuration: string; totalCalories: number; difficulty: string; focusArea: string }) => {
       await apiRequest("POST", "/api/activities", {
@@ -194,6 +204,7 @@ export function AiWorkoutGenerator({ partners, activePartner }: AiWorkoutGenerat
         calories: plan.totalCalories,
         difficulty: plan.difficulty,
         iconName: "Dumbbell",
+        workoutType: focusToWorkoutType(plan.focusArea),
         exercises: JSON.stringify(plan.exercises),
       });
     },

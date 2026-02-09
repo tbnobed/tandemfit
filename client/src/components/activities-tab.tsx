@@ -150,9 +150,19 @@ export function ActivitiesTab({ activities, partners, activePartner, workoutLogs
   const [recordDuration, setRecordDuration] = useState<string>("60");
   const [recordName, setRecordName] = useState<string>("");
 
+  const visibleActivities = activities.filter((a) => {
+    if (a.type === "Individual" && a.partnerId && activePartner) {
+      return a.partnerId === activePartner.id;
+    }
+    if (a.type === "Individual" && a.partnerId && !activePartner) {
+      return false;
+    }
+    return true;
+  });
+
   const filtered = filter === "all"
-    ? activities
-    : activities.filter((a) => a.type === filter);
+    ? visibleActivities
+    : visibleActivities.filter((a) => a.type === filter);
 
   const handleLog = () => {
     if (!selectedActivity || !activePartner) return;

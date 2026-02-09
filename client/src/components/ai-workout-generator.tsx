@@ -188,7 +188,8 @@ export function AiWorkoutGenerator({ partners, activePartner }: AiWorkoutGenerat
     mutationFn: async (plan: { planName: string; exercises: Exercise[]; totalDuration: string; totalCalories: number; difficulty: string; focusArea: string }) => {
       await apiRequest("POST", "/api/activities", {
         name: plan.planName,
-        type: plan.focusArea,
+        type: "Individual",
+        partnerId: activePartner?.id || null,
         duration: plan.totalDuration,
         calories: plan.totalCalories,
         difficulty: plan.difficulty,

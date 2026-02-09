@@ -416,7 +416,7 @@ export async function registerRoutes(
 
         if (lastDate !== today) {
           const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-          const newStreak = lastDate === yesterday ? partner.streak + 1 : 1;
+          const newStreak = lastDate === yesterday ? partner.streak + 1 : 0;
           await storage.updatePartnerStreak(partner.id, newStreak, today);
         }
       }

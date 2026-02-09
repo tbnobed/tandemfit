@@ -952,12 +952,16 @@ export function ActivitiesTab({ activities, partners, activePartner, workoutLogs
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-foreground mb-2 block">Duration</label>
-                <Input
-                  value={form.duration}
-                  onChange={(e) => setForm({ ...form, duration: e.target.value })}
-                  placeholder="e.g. 30 min"
-                  data-testid="input-activity-duration"
-                />
+                <Select value={form.duration} onValueChange={(v) => setForm({ ...form, duration: v })}>
+                  <SelectTrigger data-testid="select-activity-duration">
+                    <SelectValue placeholder="Select duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[30, 60, 90, 120, 150, 180].map(m => (
+                      <SelectItem key={m} value={`${m} min`}>{m} min</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="text-sm font-medium text-foreground mb-2 block">Workout Type</label>

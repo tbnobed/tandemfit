@@ -164,17 +164,32 @@ export function ActivitiesTab({ activities, partners, activePartner, workoutLogs
     ? visibleActivities
     : visibleActivities.filter((a) => a.type === filter);
 
+  const logForPartners = (activityName: string, duration: number, activityType: string) => {
+    const wType = guessWorkoutType(activityName);
+    if (activityType === "Together") {
+      partners.forEach((p) => {
+        onLogWorkout({
+          partnerId: p.id,
+          activityName,
+          duration,
+          caloriesBurned: calculateCalories(p, wType, duration),
+        });
+      });
+    } else if (activePartner) {
+      onLogWorkout({
+        partnerId: activePartner.id,
+        activityName,
+        duration,
+        caloriesBurned: calculateCalories(activePartner, wType, duration),
+      });
+    }
+  };
+
   const handleLog = () => {
-    if (!selectedActivity || !activePartner) return;
+    if (!selectedActivity) return;
+    if (selectedActivity.type !== "Together" && !activePartner) return;
     const duration = parseDurationMinutes(selectedActivity.duration);
-    const wType = guessWorkoutType(selectedActivity.name);
-    const cal = calculateCalories(activePartner, wType, duration);
-    onLogWorkout({
-      partnerId: activePartner.id,
-      activityName: selectedActivity.name,
-      duration,
-      caloriesBurned: cal,
-    });
+    logForPartners(selectedActivity.name, duration, selectedActivity.type);
     setSelectedActivity(null);
   };
 
@@ -478,13 +493,35 @@ export function ActivitiesTab({ activities, partners, activePartner, workoutLogs
                     <div className="text-muted-foreground mt-0.5">Duration</div>
                   </div>
                   <div className="text-center p-2 bg-muted/50 rounded-md">
-                    <div className="font-semibold text-foreground flex items-center justify-center gap-1">
-                      <FireIcon className="w-3 h-3" />
-                      {activePartner
-                        ? calculateCalories(activePartner, guessWorkoutType(activity.name), parseDurationMinutes(activity.duration))
-                        : activity.calories}
-                    </div>
-                    <div className="text-muted-foreground mt-0.5">Est. Cal</div>
+                    {activity.type === "Together" && partners.length === 2 ? (
+                      <>
+                        <div className="flex items-center justify-center gap-1 mb-0.5">
+                          <FireIcon className="w-3 h-3" />
+                          <span className="font-semibold text-foreground">Est. Cal</span>
+                        </div>
+                        <div className="flex items-center justify-center gap-3 mt-1">
+                          {partners.map((p) => {
+                            const cal = calculateCalories(p, guessWorkoutType(activity.name), parseDurationMinutes(activity.duration));
+                            return (
+                              <span key={p.id} className="flex items-center gap-1" data-testid={`cal-${p.name.toLowerCase()}-${activity.id}`}>
+                                <span className={`w-2 h-2 rounded-full shrink-0 ${p.color === "blue" ? "bg-blue-500" : "bg-pink-500"}`} />
+                                <span className="font-semibold text-foreground">{cal}</span>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="font-semibold text-foreground flex items-center justify-center gap-1">
+                          <FireIcon className="w-3 h-3" />
+                          {activePartner
+                            ? calculateCalories(activePartner, guessWorkoutType(activity.name), parseDurationMinutes(activity.duration))
+                            : activity.calories}
+                        </div>
+                        <div className="text-muted-foreground mt-0.5">Est. Cal</div>
+                      </>
+                    )}
                   </div>
                   <div className="text-center p-2 bg-muted/50 rounded-md">
                     <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold ${difficultyColor(activity.difficulty)}`}>
@@ -589,12 +626,25 @@ export function ActivitiesTab({ activities, partners, activePartner, workoutLogs
                   <DialogTitle className="text-lg">{detailActivity.name}</DialogTitle>
                   <DialogDescription className="flex items-center gap-3 flex-wrap">
                     <span className="flex items-center gap-1"><Timer className="w-3.5 h-3.5" />{detailActivity.duration}</span>
-                    <span className="flex items-center gap-1">
-                      <FireIcon className="w-3.5 h-3.5" />
-                      ~{activePartner
-                        ? calculateCalories(activePartner, guessWorkoutType(detailActivity.name), parseDurationMinutes(detailActivity.duration))
-                        : detailActivity.calories} cal
-                    </span>
+                    {detailActivity.type === "Together" && partners.length === 2 ? (
+                      <span className="flex items-center gap-2">
+                        <FireIcon className="w-3.5 h-3.5" />
+                        {partners.map((p) => (
+                          <span key={p.id} className="flex items-center gap-1">
+                            <span className={`w-2 h-2 rounded-full ${p.color === "blue" ? "bg-blue-500" : "bg-pink-500"}`} />
+                            {calculateCalories(p, guessWorkoutType(detailActivity.name), parseDurationMinutes(detailActivity.duration))}
+                          </span>
+                        ))}
+                        cal
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1">
+                        <FireIcon className="w-3.5 h-3.5" />
+                        ~{activePartner
+                          ? calculateCalories(activePartner, guessWorkoutType(detailActivity.name), parseDurationMinutes(detailActivity.duration))
+                          : detailActivity.calories} cal
+                      </span>
+                    )}
                     <Badge variant="secondary" className="text-[10px]">{detailActivity.difficulty}</Badge>
                     <Badge variant="secondary" className="text-[10px]">{detailActivity.type}</Badge>
                   </DialogDescription>
@@ -652,26 +702,33 @@ export function ActivitiesTab({ activities, partners, activePartner, workoutLogs
                     </div>
                   ))}
                 </div>
-                {activePartner && (
-                  <div className="pt-2 border-t border-border">
+                {(activePartner || (detailActivity && detailActivity.type === "Together")) && (
+                  <div className="pt-2 border-t border-border space-y-2">
+                    {detailActivity && detailActivity.type === "Together" && partners.length === 2 && (
+                      <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+                        {partners.map((p) => {
+                          const cal = calculateCalories(p, guessWorkoutType(detailActivity.name), parseDurationMinutes(detailActivity.duration));
+                          return (
+                            <span key={p.id} className="flex items-center gap-1">
+                              <span className={`w-2 h-2 rounded-full ${p.color === "blue" ? "bg-blue-500" : "bg-pink-500"}`} />
+                              <span className="font-medium text-foreground">{p.name}: {cal} cal</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                     <Button
                       className="w-full"
                       onClick={() => {
-                        if (!detailActivity || !activePartner) return;
+                        if (!detailActivity) return;
                         const dur = parseDurationMinutes(detailActivity.duration);
-                        const wType = guessWorkoutType(detailActivity.name);
-                        onLogWorkout({
-                          partnerId: activePartner.id,
-                          activityName: detailActivity.name,
-                          duration: dur,
-                          caloriesBurned: calculateCalories(activePartner, wType, dur),
-                        });
+                        logForPartners(detailActivity.name, dur, detailActivity.type);
                         setDetailActivity(null);
                       }}
                       disabled={isLogging}
                       data-testid="button-detail-log"
                     >
-                      {isLogging ? "Logging..." : `Log for ${activePartner.name}`}
+                      {isLogging ? "Logging..." : detailActivity?.type === "Together" ? "Log for Both" : activePartner ? `Log for ${activePartner.name}` : "Log Workout"}
                     </Button>
                   </div>
                 )}
@@ -688,20 +745,36 @@ export function ActivitiesTab({ activities, partners, activePartner, workoutLogs
             <DialogTitle>Log Activity</DialogTitle>
             <DialogDescription>
               {selectedActivity?.name} - {selectedActivity?.duration}
-              {activePartner && selectedActivity && (
-                <>, ~{calculateCalories(activePartner, guessWorkoutType(selectedActivity.name), parseDurationMinutes(selectedActivity.duration))} cal for {activePartner.name}</>
-              )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
-            {activePartner ? (
+            {selectedActivity && selectedActivity.type === "Together" && partners.length === 2 && (
+              <div className="flex items-center justify-center gap-4 text-sm">
+                {partners.map((p) => {
+                  const cal = calculateCalories(p, guessWorkoutType(selectedActivity.name), parseDurationMinutes(selectedActivity.duration));
+                  return (
+                    <span key={p.id} className="flex items-center gap-1.5">
+                      <span className={`w-2.5 h-2.5 rounded-full ${p.color === "blue" ? "bg-blue-500" : "bg-pink-500"}`} />
+                      <span className="text-foreground font-medium">{p.name}:</span>
+                      <span className="text-muted-foreground">~{cal} cal</span>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+            {selectedActivity && selectedActivity.type !== "Together" && activePartner && (
+              <p className="text-sm text-muted-foreground text-center">
+                ~{calculateCalories(activePartner, guessWorkoutType(selectedActivity.name), parseDurationMinutes(selectedActivity.duration))} cal for {activePartner.name}
+              </p>
+            )}
+            {(activePartner || (selectedActivity && selectedActivity.type === "Together")) ? (
               <Button
                 className="w-full"
                 onClick={handleLog}
                 disabled={isLogging}
                 data-testid="button-confirm-log"
               >
-                {isLogging ? "Logging..." : `Log for ${activePartner.name}`}
+                {isLogging ? "Logging..." : selectedActivity?.type === "Together" ? "Log for Both" : `Log for ${activePartner?.name}`}
               </Button>
             ) : (
               <p className="text-sm text-muted-foreground text-center">Select your profile in the header first</p>

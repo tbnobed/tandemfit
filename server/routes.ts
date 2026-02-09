@@ -463,6 +463,7 @@ export async function registerRoutes(
         heightInches: z.number().nullable().optional(),
         weightLbs: z.number().nullable().optional(),
         fitnessLevel: z.string().optional(),
+        sex: z.string().optional(),
         goal: z.string().optional(),
         weeklyGoal: z.number().optional(),
         calorieGoal: z.number().optional(),

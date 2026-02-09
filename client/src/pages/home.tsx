@@ -276,15 +276,15 @@ export default function Home() {
   });
 
   const updateGoalsMutation = useMutation({
-    mutationFn: async ({ partnerId, weeklyGoal, calorieGoal }: { partnerId: string; weeklyGoal: number; calorieGoal: number }) => {
-      await apiRequest("PATCH", `/api/partners/${partnerId}`, { weeklyGoal, calorieGoal });
+    mutationFn: async ({ partnerId, data }: { partnerId: string; data: Record<string, unknown> }) => {
+      await apiRequest("PATCH", `/api/partners/${partnerId}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/partners"] });
-      toast({ title: "Goals updated!" });
+      toast({ title: "Profile updated!" });
     },
     onError: () => {
-      toast({ title: "Failed to update goals", variant: "destructive" });
+      toast({ title: "Failed to update profile", variant: "destructive" });
     },
   });
 
@@ -335,7 +335,7 @@ export default function Home() {
             weeklyPoints={weeklyPoints}
             weeklyWins={weeklyWins}
             onSendMessage={(msg) => sendMessageMutation.mutate(msg)}
-            onUpdateGoals={(partnerId, weeklyGoal, calorieGoal) => updateGoalsMutation.mutate({ partnerId, weeklyGoal, calorieGoal })}
+            onUpdateGoals={(partnerId, data) => updateGoalsMutation.mutate({ partnerId, data })}
             isSending={sendMessageMutation.isPending}
             isUpdatingGoals={updateGoalsMutation.isPending}
           />

@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import type { Partner, Challenge, MotivationMessage, WorkoutLog, WeeklyWin } from "@shared/schema";
 
@@ -23,7 +24,7 @@ interface DashboardTabProps {
   weeklyPoints?: { weekStart: string; results: WeeklyPointsResult[] };
   weeklyWins: WeeklyWin[];
   onSendMessage: (message: string) => void;
-  onUpdateGoals: (partnerId: string, weeklyGoal: number, calorieGoal: number) => void;
+  onUpdateGoals: (partnerId: string, data: Record<string, unknown>) => void;
   isSending: boolean;
   isUpdatingGoals: boolean;
 }
@@ -88,6 +89,7 @@ export function DashboardTab({
   const [editingGoals, setEditingGoals] = useState<string | null>(null);
   const [editWeekly, setEditWeekly] = useState(0);
   const [editCalorie, setEditCalorie] = useState(0);
+  const [editSex, setEditSex] = useState("");
 
   const handleSend = () => {
     if (newMessage.trim()) {
@@ -218,6 +220,7 @@ export function DashboardTab({
                                 setEditingGoals(partner.id);
                                 setEditWeekly(partner.weeklyGoal);
                                 setEditCalorie(partner.calorieGoal);
+                                setEditSex(partner.sex || "male");
                               }}
                               data-testid={`button-edit-goals-${partner.name.toLowerCase()}`}
                             >
@@ -252,13 +255,25 @@ export function DashboardTab({
                               data-testid={`input-calorie-goal-${partner.name.toLowerCase()}`}
                             />
                           </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">Sex</label>
+                            <Select value={editSex} onValueChange={setEditSex}>
+                              <SelectTrigger data-testid={`select-sex-${partner.name.toLowerCase()}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="male">Male</SelectItem>
+                                <SelectItem value="female">Female</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                           <div className="flex gap-2">
                             <Button
                               className="flex-1"
                               disabled={isUpdatingGoals}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onUpdateGoals(partner.id, editWeekly, editCalorie);
+                                onUpdateGoals(partner.id, { weeklyGoal: editWeekly, calorieGoal: editCalorie, sex: editSex });
                                 setEditingGoals(null);
                               }}
                               data-testid={`button-save-goals-${partner.name.toLowerCase()}`}

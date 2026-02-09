@@ -34,11 +34,12 @@ function getWeeklyCompletedCount(logs: WorkoutLog[], partnerId: string): number 
   startOfWeek.setDate(now.getDate() - now.getDay());
   startOfWeek.setHours(0, 0, 0, 0);
 
-  return logs.filter(
-    (log) =>
-      log.partnerId === partnerId &&
-      new Date(log.loggedAt) >= startOfWeek
-  ).length;
+  const uniqueDays = new Set(
+    logs
+      .filter((log) => log.partnerId === partnerId && new Date(log.loggedAt) >= startOfWeek)
+      .map((log) => new Date(log.loggedAt).toLocaleDateString())
+  );
+  return uniqueDays.size;
 }
 
 function getWeeklyWorkouts(logs: WorkoutLog[], partnerId: string): WorkoutLog[] {

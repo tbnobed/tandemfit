@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/header";
+import { SplashScreen } from "@/components/splash-screen";
 import { TabNavigation, type TabId } from "@/components/tab-navigation";
 import { DashboardTab } from "@/components/dashboard-tab";
 import { ActivitiesTab } from "@/components/activities-tab";
@@ -61,13 +62,10 @@ export default function Home() {
   });
 
   useEffect(() => {
-    if (partners.length > 0 && !activePartnerId) {
-      const stored = localStorage.getItem("tandemfit_active_partner");
-      if (stored && partners.find(p => p.id === stored)) {
-        setActivePartnerId(stored);
-      } else {
-        setActivePartnerId(partners[0].id);
-        localStorage.setItem("tandemfit_active_partner", partners[0].id);
+    if (partners.length > 0 && activePartnerId) {
+      if (!partners.find(p => p.id === activePartnerId)) {
+        setActivePartnerId(null);
+        localStorage.removeItem("tandemfit_active_partner");
       }
     }
   }, [partners, activePartnerId]);
@@ -237,6 +235,12 @@ export default function Home() {
       toast({ title: "Failed to update progress", variant: "destructive" });
     },
   });
+
+  const showSplash = !partnersLoading && partners.length > 0 && !activePartnerId;
+
+  if (showSplash) {
+    return <SplashScreen partners={partners} onSelectPartner={handleSelectPartner} />;
+  }
 
   const isLoading = partnersLoading || activitiesLoading || mealsLoading || challengesLoading;
 

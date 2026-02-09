@@ -62,37 +62,9 @@ export async function seedDatabase() {
   ]);
 
   await Promise.all([
-    storage.createChallenge({ name: "7-Day Couple Challenge", description: "Work out together every day this week", progress: 42, goal: 100, reward: "Golden Hearts Badge", rewardIcon: "Trophy", active: true }),
-    storage.createChallenge({ name: "Healthy Meal Streak", description: "Cook 10 healthy meals together", progress: 60, goal: 100, reward: "Master Chef Badge", rewardIcon: "Award", active: true }),
-    storage.createChallenge({ name: "Monthly Active Days", description: "Both complete 20 active days", progress: 75, goal: 100, reward: "Power Couple Badge", rewardIcon: "Trophy", active: true }),
-  ]);
-
-  await Promise.all([
-    storage.createBadge({ name: "First Flame", description: "First workout streak", iconName: "Award", weekNumber: 1 }),
-    storage.createBadge({ name: "Strong Together", description: "5 workouts together", iconName: "Trophy", weekNumber: 2 }),
-    storage.createBadge({ name: "Heart Warriors", description: "10 days active", iconName: "Award", weekNumber: 3 }),
-    storage.createBadge({ name: "Rising Stars", description: "Weekly goal met", iconName: "Trophy", weekNumber: 4 }),
-    storage.createBadge({ name: "Runners Up", description: "First run logged", iconName: "Award", weekNumber: 5 }),
-    storage.createBadge({ name: "Clean Eaters", description: "5 healthy meals cooked", iconName: "Award", weekNumber: 6 }),
-  ]);
-
-  await Promise.all([
-    storage.createMessage({ message: "You two are crushing it!" }),
-    storage.createMessage({ message: "Kristina logged a morning run - time to match her energy!" }),
-    storage.createMessage({ message: "12-day streak together! Keep it going!" }),
-    storage.createMessage({ message: "You're both 85% to your weekly goal! Almost there!" }),
-  ]);
-
-  const now = new Date();
-  await Promise.all([
-    storage.createWorkoutLog({ partnerId: obed.id, activityName: "Morning Hike", duration: 45, caloriesBurned: 350, loggedAt: new Date(now.getTime() - 1 * 86400000) }),
-    storage.createWorkoutLog({ partnerId: obed.id, activityName: "HIIT Workout", duration: 25, caloriesBurned: 280, loggedAt: new Date(now.getTime() - 2 * 86400000) }),
-    storage.createWorkoutLog({ partnerId: obed.id, activityName: "Bike Ride", duration: 40, caloriesBurned: 320, loggedAt: now }),
-    storage.createWorkoutLog({ partnerId: kristina.id, activityName: "Couples Yoga", duration: 30, caloriesBurned: 180, loggedAt: new Date(now.getTime() - 1 * 86400000) }),
-    storage.createWorkoutLog({ partnerId: kristina.id, activityName: "Dance Class", duration: 60, caloriesBurned: 400, loggedAt: new Date(now.getTime() - 2 * 86400000) }),
-    storage.createWorkoutLog({ partnerId: kristina.id, activityName: "Swimming", duration: 45, caloriesBurned: 400, loggedAt: now }),
-    storage.createWorkoutLog({ partnerId: kristina.id, activityName: "Morning Hike", duration: 45, caloriesBurned: 350, loggedAt: new Date(now.getTime() - 3 * 86400000) }),
-    storage.createWorkoutLog({ partnerId: kristina.id, activityName: "Bike Ride", duration: 40, caloriesBurned: 320, loggedAt: new Date(now.getTime() - 4 * 86400000) }),
+    storage.createChallenge({ name: "7-Day Couple Challenge", description: "Work out together every day this week", progress: 0, goal: 100, reward: "Golden Hearts Badge", rewardIcon: "Trophy", active: true }),
+    storage.createChallenge({ name: "Healthy Meal Streak", description: "Cook 10 healthy meals together", progress: 0, goal: 100, reward: "Master Chef Badge", rewardIcon: "Award", active: true }),
+    storage.createChallenge({ name: "Monthly Active Days", description: "Both complete 20 active days", progress: 0, goal: 100, reward: "Power Couple Badge", rewardIcon: "Trophy", active: true }),
   ]);
 
   console.log("Database seeded successfully!");

@@ -43,6 +43,7 @@ export const activities = pgTable("activities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   type: text("type").notNull().default("Together"),
+  partnerId: varchar("partner_id"),
   duration: text("duration").notNull(),
   calories: integer("calories").notNull(),
   difficulty: text("difficulty").notNull().default("Medium"),

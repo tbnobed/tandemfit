@@ -1,6 +1,7 @@
 import {
   Dumbbell, Mountain, Waves, Bike, Zap, Music, Timer, Flame as FireIcon, BarChart3,
-  HeartPulse, Footprints, PersonStanding, Pencil, Trash2, Plus, ChevronDown, Clock
+  HeartPulse, Footprints, PersonStanding, Pencil, Trash2, Plus, ChevronDown, Clock,
+  Play, User, Calendar
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import type { Activity, Partner } from "@shared/schema";
+import type { Activity, Partner, WorkoutLog } from "@shared/schema";
 import { AiWorkoutGenerator } from "./ai-workout-generator";
 
 interface WorkoutExercise {
@@ -32,9 +33,70 @@ function getIcon(name: string) {
   return iconMap[name] || Dumbbell;
 }
 
+const MET_VALUES: Record<string, number> = {
+  "Free Weights": 6.0,
+  "Cardio": 7.0,
+  "HIIT": 8.0,
+  "Yoga": 3.0,
+  "Walking": 3.5,
+  "Running": 9.8,
+  "Cycling": 7.5,
+  "Swimming": 8.0,
+  "Dance": 5.5,
+  "Stretching": 2.5,
+  "Bodyweight": 5.0,
+  "Core": 4.0,
+  "Pilates": 3.5,
+  "CrossFit": 8.0,
+  "Boxing": 7.8,
+  "Climbing": 8.0,
+  "Other": 5.0,
+};
+
+const WORKOUT_TYPES = Object.keys(MET_VALUES);
+
+function calculateCalories(
+  partner: Partner,
+  workoutType: string,
+  durationMinutes: number
+): number {
+  const weightKg = (partner.weightLbs || 150) * 0.453592;
+  const met = MET_VALUES[workoutType] || MET_VALUES["Other"];
+  const calories = met * weightKg * (durationMinutes / 60);
+  return Math.round(calories);
+}
+
+function parseDurationMinutes(duration: string): number {
+  const num = parseInt(duration.replace(/[^\d]/g, ""));
+  return isNaN(num) || num <= 0 ? 30 : num;
+}
+
+function guessWorkoutType(activityName: string): string {
+  const lower = activityName.toLowerCase();
+  if (lower.includes("run") || lower.includes("jog")) return "Running";
+  if (lower.includes("walk")) return "Walking";
+  if (lower.includes("swim")) return "Swimming";
+  if (lower.includes("cycl") || lower.includes("bike")) return "Cycling";
+  if (lower.includes("yoga")) return "Yoga";
+  if (lower.includes("hiit") || lower.includes("circuit")) return "HIIT";
+  if (lower.includes("dance") || lower.includes("zumba")) return "Dance";
+  if (lower.includes("stretch") || lower.includes("flex")) return "Stretching";
+  if (lower.includes("core") || lower.includes("abs")) return "Core";
+  if (lower.includes("pilates")) return "Pilates";
+  if (lower.includes("crossfit")) return "CrossFit";
+  if (lower.includes("box")) return "Boxing";
+  if (lower.includes("climb")) return "Climbing";
+  if (lower.includes("weight") || lower.includes("dumbbell") || lower.includes("bench") || lower.includes("curl") || lower.includes("press") || lower.includes("row") || lower.includes("squat")) return "Free Weights";
+  if (lower.includes("cardio")) return "Cardio";
+  if (lower.includes("body") || lower.includes("pushup") || lower.includes("push-up") || lower.includes("plank")) return "Bodyweight";
+  return "Other";
+}
+
 interface ActivitiesTabProps {
   activities: Activity[];
   partners: Partner[];
+  activePartner: Partner | null;
+  workoutLogs: WorkoutLog[];
   onLogWorkout: (data: {
     partnerId: string;
     activityName: string;
@@ -75,30 +137,53 @@ function parseExercises(activity: Activity): WorkoutExercise[] | null {
   return null;
 }
 
-export function ActivitiesTab({ activities, partners, onLogWorkout, isLogging, onCreateActivity, onUpdateActivity, onDeleteActivity, isSaving }: ActivitiesTabProps) {
+export function ActivitiesTab({ activities, partners, activePartner, workoutLogs, onLogWorkout, isLogging, onCreateActivity, onUpdateActivity, onDeleteActivity, isSaving }: ActivitiesTabProps) {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [detailActivity, setDetailActivity] = useState<Activity | null>(null);
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
-  const [selectedPartner, setSelectedPartner] = useState<string>("");
   const [filter, setFilter] = useState<string>("all");
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [form, setForm] = useState<ActivityFormState>(defaultForm);
+  const [recordOpen, setRecordOpen] = useState(false);
+  const [recordType, setRecordType] = useState<string>("Free Weights");
+  const [recordDuration, setRecordDuration] = useState<string>("60");
+  const [recordName, setRecordName] = useState<string>("");
 
   const filtered = filter === "all"
     ? activities
     : activities.filter((a) => a.type === filter);
 
   const handleLog = () => {
-    if (!selectedActivity || !selectedPartner) return;
+    if (!selectedActivity || !activePartner) return;
+    const duration = parseDurationMinutes(selectedActivity.duration);
+    const wType = guessWorkoutType(selectedActivity.name);
+    const cal = calculateCalories(activePartner, wType, duration);
     onLogWorkout({
-      partnerId: selectedPartner,
+      partnerId: activePartner.id,
       activityName: selectedActivity.name,
-      duration: parseInt(selectedActivity.duration),
-      caloriesBurned: selectedActivity.calories,
+      duration,
+      caloriesBurned: cal,
     });
     setSelectedActivity(null);
-    setSelectedPartner("");
+  };
+
+  const handleRecordWorkout = () => {
+    if (!activePartner) return;
+    const dur = parseInt(recordDuration);
+    if (isNaN(dur) || dur <= 0) return;
+    const cal = calculateCalories(activePartner, recordType, dur);
+    const name = recordName.trim() || `${recordType} Session`;
+    onLogWorkout({
+      partnerId: activePartner.id,
+      activityName: name,
+      duration: dur,
+      caloriesBurned: cal,
+    });
+    setRecordOpen(false);
+    setRecordName("");
+    setRecordDuration("60");
+    setRecordType("Free Weights");
   };
 
   const openEdit = (activity: Activity, e: React.MouseEvent) => {
@@ -159,15 +244,135 @@ export function ActivitiesTab({ activities, partners, onLogWorkout, isLogging, o
 
   const formDialog = editingActivity || isCreating;
 
+  const myLogs = activePartner
+    ? workoutLogs.filter(l => l.partnerId === activePartner.id).sort((a, b) => new Date(b.loggedAt).getTime() - new Date(a.loggedAt).getTime())
+    : [];
+
+  const thisWeekLogs = myLogs.filter(l => {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    return new Date(l.loggedAt) >= startOfWeek;
+  });
+
+  const weekCalories = thisWeekLogs.reduce((sum, l) => sum + l.caloriesBurned, 0);
+  const weekMinutes = thisWeekLogs.reduce((sum, l) => sum + l.duration, 0);
+  const weekWorkouts = thisWeekLogs.length;
+
+  const estimatedCalories = activePartner
+    ? calculateCalories(activePartner, recordType, parseInt(recordDuration) || 0)
+    : 0;
+
   return (
     <div className="space-y-8">
+      {activePartner && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm ${
+                activePartner.color === "blue" ? "bg-blue-500" : "bg-pink-500"
+              }`}>
+                {activePartner.name[0]}
+              </div>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-foreground" data-testid="text-my-workouts-title">
+                  {activePartner.name}'s Workouts
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {activePartner.weightLbs} lbs, {activePartner.heightFeet}'{activePartner.heightInches}" &middot; {activePartner.fitnessLevel}
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setRecordOpen(true)}
+              data-testid="button-record-workout"
+            >
+              <Play className="w-4 h-4 mr-2" />
+              Record Workout
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-foreground" data-testid="text-week-workouts">{weekWorkouts}</div>
+                <div className="text-xs text-muted-foreground mt-1">Workouts This Week</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-foreground" data-testid="text-week-minutes">{weekMinutes}</div>
+                <div className="text-xs text-muted-foreground mt-1">Minutes</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-foreground" data-testid="text-week-calories">{weekCalories.toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground mt-1">Calories Burned</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {myLogs.length > 0 && (
+            <div>
+              <h3 className="font-semibold text-sm text-foreground mb-3 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-primary" />
+                Recent Workouts
+              </h3>
+              <div className="space-y-2">
+                {myLogs.slice(0, 5).map((log) => (
+                  <div
+                    key={log.id}
+                    className="flex items-center justify-between gap-3 p-3 bg-muted/40 rounded-md"
+                    data-testid={`log-entry-${log.id}`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Dumbbell className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{log.activityName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(log.loggedAt).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0 text-xs">
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <Timer className="w-3 h-3" />{log.duration}m
+                      </span>
+                      <span className="flex items-center gap-1 font-semibold text-foreground">
+                        <FireIcon className="w-3 h-3 text-orange-500" />{log.caloriesBurned}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!activePartner && (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <User className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+            <h3 className="font-semibold text-foreground mb-1">Select Your Profile</h3>
+            <p className="text-sm text-muted-foreground">Tap your avatar in the header to get started with personalized workouts</p>
+          </CardContent>
+        </Card>
+      )}
+
       <AiWorkoutGenerator partners={partners} />
 
       <div className="border-t pt-8">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-foreground" data-testid="text-activities-title">Activity Suggestions</h2>
-            <p className="text-sm text-muted-foreground mt-1">Fun ways to stay active together and separately</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {activePartner ? `Workouts for ${activePartner.name}` : "Fun ways to stay active together and separately"}
+            </p>
           </div>
           <Button onClick={openCreate} data-testid="button-add-activity">
             <Plus className="w-4 h-4 mr-2" />
@@ -265,9 +470,11 @@ export function ActivitiesTab({ activities, partners, onLogWorkout, isLogging, o
                   <div className="text-center p-2 bg-muted/50 rounded-md">
                     <div className="font-semibold text-foreground flex items-center justify-center gap-1">
                       <FireIcon className="w-3 h-3" />
-                      {activity.calories}
+                      {activePartner
+                        ? calculateCalories(activePartner, guessWorkoutType(activity.name), parseDurationMinutes(activity.duration))
+                        : activity.calories}
                     </div>
-                    <div className="text-muted-foreground mt-0.5">Calories</div>
+                    <div className="text-muted-foreground mt-0.5">Est. Cal</div>
                   </div>
                   <div className="text-center p-2 bg-muted/50 rounded-md">
                     <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold ${difficultyColor(activity.difficulty)}`}>
@@ -282,18 +489,102 @@ export function ActivitiesTab({ activities, partners, onLogWorkout, isLogging, o
         })}
       </div>
 
+      {/* Record Workout Dialog */}
+      <Dialog open={recordOpen} onOpenChange={setRecordOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record Workout</DialogTitle>
+            <DialogDescription>
+              {activePartner
+                ? `Log a workout for ${activePartner.name} (${activePartner.weightLbs} lbs)`
+                : "Select your profile first"}
+            </DialogDescription>
+          </DialogHeader>
+          {activePartner && (
+            <div className="space-y-4 pt-2">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">Workout Name (optional)</label>
+                <Input
+                  value={recordName}
+                  onChange={(e) => setRecordName(e.target.value)}
+                  placeholder="e.g. Morning Lift"
+                  data-testid="input-record-name"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">Workout Type</label>
+                <Select value={recordType} onValueChange={setRecordType}>
+                  <SelectTrigger data-testid="select-record-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WORKOUT_TYPES.map(t => (
+                      <SelectItem key={t} value={t} data-testid={`option-type-${t.toLowerCase().replace(/\s/g, "-")}`}>
+                        {t} (MET: {MET_VALUES[t]})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">Duration (minutes)</label>
+                <Input
+                  type="number"
+                  value={recordDuration}
+                  onChange={(e) => setRecordDuration(e.target.value)}
+                  placeholder="60"
+                  min="1"
+                  data-testid="input-record-duration"
+                />
+              </div>
+
+              <Card className="border-primary/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <FireIcon className="w-5 h-5 text-orange-500" />
+                      <span className="text-sm font-medium text-foreground">Estimated Calories Burned</span>
+                    </div>
+                    <span className="text-2xl font-bold text-primary" data-testid="text-estimated-calories">
+                      {estimatedCalories}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Based on {activePartner.name}'s weight ({activePartner.weightLbs} lbs) and {recordType} MET value ({MET_VALUES[recordType]})
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Button
+                className="w-full"
+                onClick={handleRecordWorkout}
+                disabled={isLogging || !recordDuration || parseInt(recordDuration) <= 0}
+                data-testid="button-confirm-record"
+              >
+                {isLogging ? "Recording..." : "Record Workout"}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Exercise Detail Dialog */}
       <Dialog open={!!detailActivity} onOpenChange={() => setDetailActivity(null)}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           {detailActivity && (() => {
             const exercises = parseExercises(detailActivity) || [];
-            const DetailIcon = getIcon(detailActivity.iconName);
             return (
               <>
                 <DialogHeader>
                   <DialogTitle className="text-lg">{detailActivity.name}</DialogTitle>
                   <DialogDescription className="flex items-center gap-3 flex-wrap">
                     <span className="flex items-center gap-1"><Timer className="w-3.5 h-3.5" />{detailActivity.duration}</span>
-                    <span className="flex items-center gap-1"><FireIcon className="w-3.5 h-3.5" />~{detailActivity.calories} cal</span>
+                    <span className="flex items-center gap-1">
+                      <FireIcon className="w-3.5 h-3.5" />
+                      ~{activePartner
+                        ? calculateCalories(activePartner, guessWorkoutType(detailActivity.name), parseDurationMinutes(detailActivity.duration))
+                        : detailActivity.calories} cal
+                    </span>
                     <Badge variant="secondary" className="text-[10px]">{detailActivity.difficulty}</Badge>
                     <Badge variant="secondary" className="text-[10px]">{detailActivity.type}</Badge>
                   </DialogDescription>
@@ -351,81 +642,65 @@ export function ActivitiesTab({ activities, partners, onLogWorkout, isLogging, o
                     </div>
                   ))}
                 </div>
-                <div className="space-y-3 pt-2 border-t border-border">
-                  <label className="text-sm font-medium text-foreground block">Log this workout</label>
-                  <Select value={selectedPartner} onValueChange={setSelectedPartner}>
-                    <SelectTrigger data-testid="select-partner-detail-log">
-                      <SelectValue placeholder="Select person" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {partners.map((p) => (
-                        <SelectItem key={p.id} value={p.id} data-testid={`option-detail-partner-${p.name.toLowerCase()}`}>
-                          {p.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    className="w-full"
-                    onClick={() => {
-                      if (!detailActivity || !selectedPartner) return;
-                      onLogWorkout({
-                        partnerId: selectedPartner,
-                        activityName: detailActivity.name,
-                        duration: parseInt(detailActivity.duration),
-                        caloriesBurned: detailActivity.calories,
-                      });
-                      setDetailActivity(null);
-                      setSelectedPartner("");
-                    }}
-                    disabled={!selectedPartner || isLogging}
-                    data-testid="button-detail-log"
-                  >
-                    {isLogging ? "Logging..." : "Log Workout"}
-                  </Button>
-                </div>
+                {activePartner && (
+                  <div className="pt-2 border-t border-border">
+                    <Button
+                      className="w-full"
+                      onClick={() => {
+                        if (!detailActivity || !activePartner) return;
+                        const dur = parseDurationMinutes(detailActivity.duration);
+                        const wType = guessWorkoutType(detailActivity.name);
+                        onLogWorkout({
+                          partnerId: activePartner.id,
+                          activityName: detailActivity.name,
+                          duration: dur,
+                          caloriesBurned: calculateCalories(activePartner, wType, dur),
+                        });
+                        setDetailActivity(null);
+                      }}
+                      disabled={isLogging}
+                      data-testid="button-detail-log"
+                    >
+                      {isLogging ? "Logging..." : `Log for ${activePartner.name}`}
+                    </Button>
+                  </div>
+                )}
               </>
             );
           })()}
         </DialogContent>
       </Dialog>
 
+      {/* Quick Log Dialog (non-AI activities) */}
       <Dialog open={!!selectedActivity} onOpenChange={() => setSelectedActivity(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Log Activity</DialogTitle>
             <DialogDescription>
-              {selectedActivity?.name} - {selectedActivity?.duration}, ~{selectedActivity?.calories} cal
+              {selectedActivity?.name} - {selectedActivity?.duration}
+              {activePartner && selectedActivity && (
+                <>, ~{calculateCalories(activePartner, guessWorkoutType(selectedActivity.name), parseDurationMinutes(selectedActivity.duration))} cal for {activePartner.name}</>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
-            <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">Who completed this?</label>
-              <Select value={selectedPartner} onValueChange={setSelectedPartner}>
-                <SelectTrigger data-testid="select-partner-log">
-                  <SelectValue placeholder="Select person" />
-                </SelectTrigger>
-                <SelectContent>
-                  {partners.map((p) => (
-                    <SelectItem key={p.id} value={p.id} data-testid={`option-partner-${p.name.toLowerCase()}`}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button
-              className="w-full"
-              onClick={handleLog}
-              disabled={!selectedPartner || isLogging}
-              data-testid="button-confirm-log"
-            >
-              {isLogging ? "Logging..." : "Log Workout"}
-            </Button>
+            {activePartner ? (
+              <Button
+                className="w-full"
+                onClick={handleLog}
+                disabled={isLogging}
+                data-testid="button-confirm-log"
+              >
+                {isLogging ? "Logging..." : `Log for ${activePartner.name}`}
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center">Select your profile in the header first</p>
+            )}
           </div>
         </DialogContent>
       </Dialog>
 
+      {/* Create/Edit Activity Dialog */}
       <Dialog open={!!formDialog} onOpenChange={() => { setEditingActivity(null); setIsCreating(false); }}>
         <DialogContent>
           <DialogHeader>

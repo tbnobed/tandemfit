@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,9 @@ import type {
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
+  const [activePartnerId, setActivePartnerId] = useState<string | null>(() => {
+    return localStorage.getItem("tandemfit_active_partner");
+  });
   const { toast } = useToast();
 
   const { data: partners = [], isLoading: partnersLoading } = useQuery<Partner[]>({
@@ -56,6 +59,25 @@ export default function Home() {
   const { data: workoutLogs = [], isLoading: logsLoading } = useQuery<WorkoutLog[]>({
     queryKey: ["/api/workout-logs"],
   });
+
+  useEffect(() => {
+    if (partners.length > 0 && !activePartnerId) {
+      const stored = localStorage.getItem("tandemfit_active_partner");
+      if (stored && partners.find(p => p.id === stored)) {
+        setActivePartnerId(stored);
+      } else {
+        setActivePartnerId(partners[0].id);
+        localStorage.setItem("tandemfit_active_partner", partners[0].id);
+      }
+    }
+  }, [partners, activePartnerId]);
+
+  const handleSelectPartner = (id: string) => {
+    setActivePartnerId(id);
+    localStorage.setItem("tandemfit_active_partner", id);
+  };
+
+  const activePartner = partners.find(p => p.id === activePartnerId) || null;
 
   const sendMessageMutation = useMutation({
     mutationFn: async (message: string) => {
@@ -243,7 +265,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header partners={partners} />
+      <Header partners={partners} activePartnerId={activePartnerId} onSelectPartner={handleSelectPartner} />
       <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
@@ -261,6 +283,8 @@ export default function Home() {
           <ActivitiesTab
             activities={activities}
             partners={partners}
+            activePartner={activePartner}
+            workoutLogs={workoutLogs}
             onLogWorkout={(data) => logWorkoutMutation.mutate(data)}
             isLogging={logWorkoutMutation.isPending}
             onCreateActivity={(data) => createActivityMutation.mutate(data)}

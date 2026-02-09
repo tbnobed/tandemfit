@@ -734,11 +734,29 @@ export function MealsTab({ meals, mealPlans, onPlanMeal, onToggleMealComplete, o
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1 block">Prep Time</label>
-                    <Input value={formPrepTime} onChange={(e) => setFormPrepTime(e.target.value)} placeholder="e.g. 15 min" data-testid="input-prep-time" />
+                    <Select value={formPrepTime} onValueChange={setFormPrepTime}>
+                      <SelectTrigger data-testid="select-prep-time">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 24 }, (_, i) => (i + 1) * 5).map(m => (
+                          <SelectItem key={m} value={`${m} min`}>{m} min</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1 block">Cook Time</label>
-                    <Input value={formCookTime} onChange={(e) => setFormCookTime(e.target.value)} placeholder="e.g. 30 min" data-testid="input-cook-time" />
+                    <Select value={formCookTime} onValueChange={setFormCookTime}>
+                      <SelectTrigger data-testid="select-cook-time">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 24 }, (_, i) => (i + 1) * 5).map(m => (
+                          <SelectItem key={m} value={`${m} min`}>{m} min</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">

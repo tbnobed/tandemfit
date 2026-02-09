@@ -197,7 +197,7 @@ export function DashboardTab({
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
-                          {editingGoals !== partner.id && (
+                          {editingGoals !== partner.id && activePartner?.id === partner.id && (
                             <Button
                               size="icon"
                               variant="ghost"

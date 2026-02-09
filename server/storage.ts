@@ -68,7 +68,7 @@ const db = drizzle(pool);
 
 export class DatabaseStorage implements IStorage {
   async getPartners(): Promise<Partner[]> {
-    return db.select().from(partners);
+    return db.select().from(partners).orderBy(partners.name);
   }
 
   async getPartner(id: string): Promise<Partner | undefined> {

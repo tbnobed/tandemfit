@@ -514,16 +514,25 @@ export async function registerRoutes(
       const heightStr = partner.heightFeet ? `${partner.heightFeet}'${partner.heightInches || 0}"` : "Not specified";
       const weightStr = partner.weightLbs ? `${partner.weightLbs} lbs` : "Not specified";
 
+      const weightKg = partner.weightLbs ? Math.round(partner.weightLbs * 0.453592) : null;
+      const bmr = partner.sex === "female"
+        ? (weightKg && partner.age && partner.heightFeet ? Math.round(10 * weightKg + 6.25 * ((partner.heightFeet * 30.48) + (partner.heightInches || 0) * 2.54) - 5 * partner.age - 161) : null)
+        : (weightKg && partner.age && partner.heightFeet ? Math.round(10 * weightKg + 6.25 * ((partner.heightFeet * 30.48) + (partner.heightInches || 0) * 2.54) - 5 * partner.age + 5) : null);
+
       const prompt = `You are a certified personal trainer. Create a personalized workout plan for the following person:
 
 Name: ${partner.name}
+Sex: ${partner.sex || "Not specified"}
 Age: ${partner.age || "Not specified"}
 Height: ${heightStr}
-Weight: ${weightStr}
+Weight: ${weightStr}${weightKg ? ` (${weightKg} kg)` : ""}
+BMR (Mifflin-St Jeor): ${bmr ? `${bmr} kcal/day` : "Not available"}
 Fitness Level: ${partner.fitnessLevel || "intermediate"}
 Goal: ${partner.goal || "general fitness"}
-Daily Calorie Goal: ${partner.calorieGoal}
+Daily Calorie Burn Goal: ${partner.calorieGoal}
 Focus Area: ${focusArea}
+
+Consider their sex, weight, and BMR when estimating calorie burn for each exercise. ${partner.sex === "female" ? "Women typically have lower muscle mass and BMR, so adjust intensity and calorie estimates accordingly." : ""}
 
 Generate a complete workout plan with 4-6 exercises. For each exercise include the name, sets, reps (or duration for timed exercises), rest period, and a brief form tip.
 

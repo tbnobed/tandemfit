@@ -20,21 +20,26 @@ function calculateEffortPoints(
   partner: Partner
 ): number {
   const weightKg = partner.weightLbs ? partner.weightLbs * 0.453592 : 70;
-  const normalizedCals = (caloriesBurned / weightKg) * 100;
+
+  const baselineWeightKg = 75;
+  const weightFactor = baselineWeightKg / weightKg;
+  const normalizedCals = caloriesBurned * weightFactor;
+
+  const sexMult = partner.sex === "female" ? 1.15 : 1.0;
 
   const fitnessMultipliers: Record<string, number> = {
-    beginner: 1.25,
+    beginner: 0.85,
     intermediate: 1.0,
-    advanced: 0.85,
+    advanced: 1.15,
   };
   const fitnessMult = fitnessMultipliers[partner.fitnessLevel || "intermediate"] || 1.0;
 
   const age = partner.age || 25;
-  const ageMult = 1 + Math.max(0, (age - 20) * 0.005);
+  const ageMult = 1 + Math.max(0, (age - 25) * 0.005);
 
-  const durationMult = 1 + Math.log10(Math.max(duration, 1)) * 0.15;
+  const durationMult = 1 + Math.log10(Math.max(duration, 1)) * 0.1;
 
-  return Math.round(normalizedCals * fitnessMult * ageMult * durationMult);
+  return Math.round(normalizedCals * sexMult * fitnessMult * ageMult * durationMult);
 }
 
 export async function registerRoutes(

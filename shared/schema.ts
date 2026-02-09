@@ -15,6 +15,7 @@ export const partners = pgTable("partners", {
   heightInches: integer("height_inches"),
   weightLbs: integer("weight_lbs"),
   fitnessLevel: text("fitness_level").default("intermediate"),
+  sex: text("sex").default("male"),
   goal: text("goal").default("general fitness"),
 });
 

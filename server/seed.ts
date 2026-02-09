@@ -26,6 +26,7 @@ export async function seedDatabase() {
     heightInches: 10,
     weightLbs: 181,
     fitnessLevel: "intermediate",
+    sex: "male",
     goal: "muscle building",
   });
 
@@ -40,6 +41,7 @@ export async function seedDatabase() {
     heightInches: 5,
     weightLbs: 137,
     fitnessLevel: "intermediate",
+    sex: "female",
     goal: "toning and cardio",
   });
 

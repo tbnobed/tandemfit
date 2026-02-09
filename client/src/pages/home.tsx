@@ -325,7 +325,7 @@ export default function Home() {
       <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-        {activeTab === "dashboard" && (
+        <div style={{ display: activeTab === "dashboard" ? "block" : "none" }}>
           <DashboardTab
             partners={partners}
             activePartner={activePartner}
@@ -339,8 +339,8 @@ export default function Home() {
             isSending={sendMessageMutation.isPending}
             isUpdatingGoals={updateGoalsMutation.isPending}
           />
-        )}
-        {activeTab === "activities" && (
+        </div>
+        <div style={{ display: activeTab === "activities" ? "block" : "none" }}>
           <ActivitiesTab
             activities={activities}
             partners={partners}
@@ -355,8 +355,8 @@ export default function Home() {
             onDeleteWorkoutLog={(id) => deleteWorkoutLogMutation.mutate(id)}
             isSaving={createActivityMutation.isPending || updateActivityMutation.isPending}
           />
-        )}
-        {activeTab === "meals" && (
+        </div>
+        <div style={{ display: activeTab === "meals" ? "block" : "none" }}>
           <MealsTab
             meals={meals}
             mealPlans={mealPlans}
@@ -371,8 +371,8 @@ export default function Home() {
             isPlanning={planMealMutation.isPending}
             isSaving={createMealMutation.isPending || updateMealMutation.isPending}
           />
-        )}
-        {activeTab === "challenges" && (
+        </div>
+        <div style={{ display: activeTab === "challenges" ? "block" : "none" }}>
           <ChallengesTab
             challenges={challenges}
             badges={badges}
@@ -381,7 +381,7 @@ export default function Home() {
             }
             isUpdating={updateProgressMutation.isPending}
           />
-        )}
+        </div>
       </main>
     </div>
   );

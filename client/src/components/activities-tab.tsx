@@ -615,14 +615,16 @@ export function ActivitiesTab({ activities, partners, activePartner, workoutLogs
               </div>
               <div>
                 <label className="text-sm font-medium text-foreground mb-2 block">Duration (minutes)</label>
-                <Input
-                  type="number"
-                  value={recordDuration}
-                  onChange={(e) => setRecordDuration(e.target.value)}
-                  placeholder="60"
-                  min="1"
-                  data-testid="input-record-duration"
-                />
+                <Select value={recordDuration} onValueChange={setRecordDuration}>
+                  <SelectTrigger data-testid="select-record-duration">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[30, 60, 90, 120, 150, 180].map(m => (
+                      <SelectItem key={m} value={String(m)}>{m} min</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <Card className="border-primary/30">

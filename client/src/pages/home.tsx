@@ -289,6 +289,7 @@ export default function Home() {
         {activeTab === "dashboard" && (
           <DashboardTab
             partners={partners}
+            activePartner={activePartner}
             challenges={challenges}
             messages={messages}
             workoutLogs={workoutLogs}

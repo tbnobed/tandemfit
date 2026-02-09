@@ -30,6 +30,7 @@ interface Exercise {
 
 interface AiWorkoutGeneratorProps {
   partners: Partner[];
+  activePartner: Partner | null;
 }
 
 const focusAreas = [
@@ -49,8 +50,7 @@ const difficultyColor = (d: string) => {
   return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
 };
 
-export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
-  const [selectedPartnerId, setSelectedPartnerId] = useState<string>("");
+export function AiWorkoutGenerator({ partners, activePartner }: AiWorkoutGeneratorProps) {
   const [selectedFocus, setSelectedFocus] = useState<string>("");
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
   const [planExpanded, setPlanExpanded] = useState(true);
@@ -74,11 +74,11 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
 
   const { toast } = useToast();
 
-  const selectedPartner = partners.find((p) => p.id === selectedPartnerId);
+  const selectedPartner = activePartner;
 
   const { data: pastPlans = [] } = useQuery<AiWorkoutPlan[]>({
-    queryKey: ["/api/ai-workout-plans", selectedPartnerId],
-    enabled: !!selectedPartnerId,
+    queryKey: ["/api/ai-workout-plans", activePartner?.id],
+    enabled: !!activePartner?.id,
   });
 
   const generateMutation = useMutation({
@@ -97,7 +97,7 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
       });
       setExpandedExercise(null);
       setPlanExpanded(true);
-      queryClient.invalidateQueries({ queryKey: ["/api/ai-workout-plans", selectedPartnerId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ai-workout-plans", activePartner?.id] });
       toast({ title: "Workout plan generated!" });
     },
     onError: (e: any) => {
@@ -120,8 +120,8 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
   });
 
   const handleGenerate = () => {
-    if (!selectedPartnerId || !selectedFocus) return;
-    generateMutation.mutate({ partnerId: selectedPartnerId, focusArea: selectedFocus });
+    if (!activePartner?.id || !selectedFocus) return;
+    generateMutation.mutate({ partnerId: activePartner.id, focusArea: selectedFocus });
   };
 
   const handleOpenProfile = () => {
@@ -139,9 +139,9 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
   };
 
   const handleSaveProfile = () => {
-    if (!selectedPartnerId) return;
+    if (!activePartner?.id) return;
     updateProfileMutation.mutate({
-      id: selectedPartnerId,
+      id: activePartner.id,
       body: {
         age: profileForm.age ? parseInt(profileForm.age) : null,
         heightFeet: profileForm.heightFeet ? parseInt(profileForm.heightFeet) : null,
@@ -176,7 +176,7 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
       await apiRequest("DELETE", `/api/ai-workout-plans/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/ai-workout-plans", selectedPartnerId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/ai-workout-plans", activePartner?.id] });
       toast({ title: "Plan deleted" });
     },
     onError: () => {
@@ -221,19 +221,13 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
         <CardContent className="p-5 space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">Generate for</label>
-              <Select value={selectedPartnerId} onValueChange={(val) => { setSelectedPartnerId(val); setGeneratedPlan(null); }}>
-                <SelectTrigger data-testid="select-ai-partner">
-                  <SelectValue placeholder="Select person" />
-                </SelectTrigger>
-                <SelectContent>
-                  {partners.map((p) => (
-                    <SelectItem key={p.id} value={p.id} data-testid={`option-ai-partner-${p.name.toLowerCase()}`}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium text-foreground mb-2 block">Generating for</label>
+              <div className="flex items-center gap-2 h-9 px-3 border border-input rounded-md bg-muted/30">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs ${activePartner?.color === "blue" ? "bg-blue-500" : "bg-pink-500"}`}>
+                  {activePartner?.name?.[0] || "?"}
+                </div>
+                <span className="text-sm font-medium" data-testid="text-ai-generating-for">{activePartner?.name || "No one selected"}</span>
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">Focus area</label>
@@ -278,7 +272,7 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
           <Button
             className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0"
             onClick={handleGenerate}
-            disabled={!selectedPartnerId || !selectedFocus || generateMutation.isPending}
+            disabled={!activePartner?.id || !selectedFocus || generateMutation.isPending}
             data-testid="button-generate-workout"
           >
             {generateMutation.isPending ? (
@@ -399,7 +393,7 @@ export function AiWorkoutGenerator({ partners }: AiWorkoutGeneratorProps) {
         </Card>
       )}
 
-      {selectedPartnerId && pastPlans.length > 0 && (
+      {activePartner?.id && pastPlans.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Previous Plans</h3>
           <div className="grid sm:grid-cols-2 gap-3">

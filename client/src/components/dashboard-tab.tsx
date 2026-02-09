@@ -8,6 +8,7 @@ import type { Partner, Challenge, MotivationMessage, WorkoutLog } from "@shared/
 
 interface DashboardTabProps {
   partners: Partner[];
+  activePartner: Partner | null;
   challenges: Challenge[];
   messages: MotivationMessage[];
   workoutLogs: WorkoutLog[];
@@ -61,6 +62,7 @@ function getTodayCalories(logs: WorkoutLog[], partnerId: string): number {
 
 export function DashboardTab({
   partners,
+  activePartner,
   challenges,
   messages,
   workoutLogs,
@@ -82,66 +84,51 @@ export function DashboardTab({
     }
   };
 
-  const streak =
-    partners.length > 0 ? Math.max(...partners.map((p) => p.streak)) : 0;
   const activeChallenges = challenges.filter((c) => c.active).slice(0, 2);
 
-  const totalWeeklyWorkouts = partners.reduce(
-    (sum, p) => sum + getWeeklyCompletedCount(workoutLogs, p.id), 0
-  );
-  const bothHitGoal = partners.length === 2 && partners.every(
-    (p) => p.weeklyGoal > 0 && getWeeklyCompletedCount(workoutLogs, p.id) >= p.weeklyGoal
-  );
-  const totalTodayCalories = partners.reduce(
-    (sum, p) => sum + getTodayCalories(workoutLogs, p.id), 0
-  );
+  const myWeeklyWorkouts = activePartner ? getWeeklyCompletedCount(workoutLogs, activePartner.id) : 0;
+  const myTodayCalories = activePartner ? getTodayCalories(workoutLogs, activePartner.id) : 0;
+  const myGoalHit = activePartner ? activePartner.weeklyGoal > 0 && myWeeklyWorkouts >= activePartner.weeklyGoal : false;
+
+  const partnerOther = activePartner ? partners.find(p => p.id !== activePartner.id) : null;
+  const partnerOtherWeekly = partnerOther ? getWeeklyCompletedCount(workoutLogs, partnerOther.id) : 0;
+  const bothHitGoal = myGoalHit && partnerOther && partnerOther.weeklyGoal > 0 && partnerOtherWeekly >= partnerOther.weeklyGoal;
 
   const getBannerContent = (): { title: string; subtitle: string } => {
+    const name = activePartner?.name || "You";
     if (bothHitGoal) {
       return {
         title: "Weekly Goals Crushed!",
-        subtitle: "Both of you hit your workout goals this week. What a power couple!",
+        subtitle: `Both you and ${partnerOther?.name} hit your goals this week!`,
       };
     }
-    if (streak >= 14) {
+    if (myGoalHit) {
       return {
-        title: "Unstoppable Together!",
-        subtitle: `${streak}-day streak! You two are a force of nature.`,
+        title: `${name}, You Did It!`,
+        subtitle: "You hit your weekly workout goal. Keep the momentum going!",
       };
     }
-    if (streak >= 7) {
+    if (myTodayCalories > 500) {
       return {
-        title: "A Full Week Strong!",
-        subtitle: `${streak}-day streak and counting. Keep inspiring each other!`,
+        title: "On Fire Today!",
+        subtitle: `${myTodayCalories} calories burned today. Incredible effort, ${name}!`,
       };
     }
-    if (totalTodayCalories > 500) {
-      return {
-        title: "Burning It Up Today!",
-        subtitle: `${totalTodayCalories} calories burned together today. What a team!`,
-      };
-    }
-    if (totalWeeklyWorkouts >= 4) {
+    if (myWeeklyWorkouts >= 3) {
       return {
         title: "Staying Consistent!",
-        subtitle: `${totalWeeklyWorkouts} workouts between you this week. Keep that momentum!`,
+        subtitle: `${myWeeklyWorkouts} workouts this week. You're building great habits, ${name}!`,
       };
     }
-    if (streak >= 3) {
+    if (myWeeklyWorkouts > 0) {
       return {
-        title: "Building Momentum!",
-        subtitle: `${streak}-day streak going. Every day counts!`,
-      };
-    }
-    if (totalWeeklyWorkouts > 0) {
-      return {
-        title: "Great Start This Week!",
-        subtitle: `${totalWeeklyWorkouts} workout${totalWeeklyWorkouts > 1 ? "s" : ""} logged so far. Let's keep it going!`,
+        title: `Great Start, ${name}!`,
+        subtitle: `${myWeeklyWorkouts} workout${myWeeklyWorkouts > 1 ? "s" : ""} logged this week. Keep going!`,
       };
     }
     return {
-      title: "Ready to Move?",
-      subtitle: "Start your first workout and build a streak together!",
+      title: `Ready to Move, ${name}?`,
+      subtitle: "Start your first workout of the week!",
     };
   };
 
@@ -165,8 +152,8 @@ export function DashboardTab({
         </CardContent>
       </Card>
 
-      <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
-        {partners.map((partner) => {
+      {activePartner && (() => {
+          const partner = activePartner;
           const weeklyCompleted = getWeeklyCompletedCount(workoutLogs, partner.id);
           const weeklyWorkoutList = getWeeklyWorkouts(workoutLogs, partner.id);
           const todayCalories = getTodayCalories(workoutLogs, partner.id);
@@ -397,8 +384,7 @@ export function DashboardTab({
               </div>
             </div>
           );
-        })}
-      </div>
+        })()}
 
       <Card>
         <CardContent className="p-5">

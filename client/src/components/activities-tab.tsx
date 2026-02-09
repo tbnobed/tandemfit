@@ -364,7 +364,7 @@ export function ActivitiesTab({ activities, partners, activePartner, workoutLogs
         </Card>
       )}
 
-      <AiWorkoutGenerator partners={partners} />
+      <AiWorkoutGenerator partners={partners} activePartner={activePartner} />
 
       <div className="border-t pt-8">
         <div className="flex items-center justify-between gap-4 flex-wrap">

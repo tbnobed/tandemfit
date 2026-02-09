@@ -8,11 +8,34 @@ import {
   insertMotivationMessageSchema,
   insertActivitySchema,
 } from "@shared/schema";
+import type { Partner } from "@shared/schema";
 import { z } from "zod";
 import OpenAI from "openai";
 
-// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+function calculateEffortPoints(
+  caloriesBurned: number,
+  duration: number,
+  partner: Partner
+): number {
+  const weightKg = partner.weightLbs ? partner.weightLbs * 0.453592 : 70;
+  const normalizedCals = (caloriesBurned / weightKg) * 100;
+
+  const fitnessMultipliers: Record<string, number> = {
+    beginner: 1.25,
+    intermediate: 1.0,
+    advanced: 0.85,
+  };
+  const fitnessMult = fitnessMultipliers[partner.fitnessLevel || "intermediate"] || 1.0;
+
+  const age = partner.age || 25;
+  const ageMult = 1 + Math.max(0, (age - 20) * 0.005);
+
+  const durationMult = 1 + Math.log10(Math.max(duration, 1)) * 0.15;
+
+  return Math.round(normalizedCals * fitnessMult * ageMult * durationMult);
+}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -377,13 +400,15 @@ export async function registerRoutes(
   app.post("/api/workout-logs", async (req, res) => {
     try {
       const parsed = insertWorkoutLogSchema.parse(req.body);
-      const log = await storage.createWorkoutLog(parsed);
-
       const partner = await storage.getPartner(parsed.partnerId);
+
+      let effortPoints = 0;
       if (partner) {
+        effortPoints = calculateEffortPoints(parsed.caloriesBurned, parsed.duration, partner);
         await storage.updatePartnerStreak(partner.id, partner.streak + 1);
       }
 
+      const log = await storage.createWorkoutLog({ ...parsed, effortPoints });
       res.json(log);
     } catch (e) {
       if (e instanceof z.ZodError) {
@@ -395,7 +420,20 @@ export async function registerRoutes(
 
   app.patch("/api/workout-logs/:id", async (req, res) => {
     try {
-      const updated = await storage.updateWorkoutLog(req.params.id, req.body);
+      const data = { ...req.body };
+      if (data.caloriesBurned !== undefined || data.duration !== undefined) {
+        const existingLogs = await storage.getWorkoutLogs();
+        const existingLog = existingLogs.find(l => l.id === req.params.id);
+        if (existingLog) {
+          const partner = await storage.getPartner(existingLog.partnerId);
+          if (partner) {
+            const cals = data.caloriesBurned ?? existingLog.caloriesBurned;
+            const dur = data.duration ?? existingLog.duration;
+            data.effortPoints = calculateEffortPoints(cals, dur, partner);
+          }
+        }
+      }
+      const updated = await storage.updateWorkoutLog(req.params.id, data);
       if (!updated) return res.status(404).json({ error: "Workout log not found" });
       res.json(updated);
     } catch (e) {
@@ -626,6 +664,110 @@ Respond with JSON in this exact format:
     } catch (e: any) {
       console.error("AI meal generation error:", e);
       res.status(500).json({ error: "Failed to generate recipe. " + (e.message || "") });
+    }
+  });
+
+  app.get("/api/weekly-points", async (_req, res) => {
+    try {
+      const [allPartners, allLogs] = await Promise.all([
+        storage.getPartners(),
+        storage.getWorkoutLogs(),
+      ]);
+
+      const now = new Date();
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      const results = allPartners.map((partner) => {
+        const weeklyLogs = allLogs.filter(
+          (l) =>
+            l.partnerId === partner.id &&
+            new Date(l.loggedAt) >= startOfWeek
+        );
+        const totalPoints = weeklyLogs.reduce((s, l) => s + l.effortPoints, 0);
+        const workoutCount = weeklyLogs.length;
+        return {
+          partnerId: partner.id,
+          partnerName: partner.name,
+          partnerColor: partner.color,
+          totalPoints,
+          workoutCount,
+        };
+      });
+
+      results.sort((a, b) => b.totalPoints - a.totalPoints);
+
+      const weekStart = startOfWeek.toISOString().split("T")[0];
+      res.json({ weekStart, results });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to fetch weekly points" });
+    }
+  });
+
+  app.get("/api/weekly-wins", async (_req, res) => {
+    try {
+      const wins = await storage.getWeeklyWins();
+      res.json(wins);
+    } catch (e) {
+      res.status(500).json({ error: "Failed to fetch weekly wins" });
+    }
+  });
+
+  app.post("/api/weekly-wins/finalize", async (_req, res) => {
+    try {
+      const [allPartners, allLogs, existingWins] = await Promise.all([
+        storage.getPartners(),
+        storage.getWorkoutLogs(),
+        storage.getWeeklyWins(),
+      ]);
+
+      const now = new Date();
+      const lastWeekStart = new Date(now);
+      lastWeekStart.setDate(now.getDate() - now.getDay() - 7);
+      lastWeekStart.setHours(0, 0, 0, 0);
+      const lastWeekEnd = new Date(lastWeekStart);
+      lastWeekEnd.setDate(lastWeekStart.getDate() + 7);
+
+      const weekStartStr = lastWeekStart.toISOString().split("T")[0];
+
+      const alreadyFinalized = existingWins.some((w) => w.weekStart === weekStartStr);
+      if (alreadyFinalized) {
+        return res.json({ message: "Week already finalized", weekStart: weekStartStr });
+      }
+
+      const scores = allPartners.map((partner) => {
+        const weekLogs = allLogs.filter(
+          (l) =>
+            l.partnerId === partner.id &&
+            new Date(l.loggedAt) >= lastWeekStart &&
+            new Date(l.loggedAt) < lastWeekEnd
+        );
+        return {
+          partnerId: partner.id,
+          points: weekLogs.reduce((s, l) => s + l.effortPoints, 0),
+        };
+      });
+
+      scores.sort((a, b) => b.points - a.points);
+      const isTie = scores.length >= 2 && scores[0].points === scores[1].points;
+      const hasAnyPoints = scores.some(s => s.points > 0);
+
+      if (!hasAnyPoints) {
+        return res.json({ message: "No workouts last week, nothing to finalize" });
+      }
+
+      const win = await storage.createWeeklyWin({
+        weekStart: weekStartStr,
+        winnerId: isTie ? null : scores[0].partnerId,
+        winnerPoints: scores[0].points,
+        runnerUpPoints: scores.length >= 2 ? scores[1].points : 0,
+        isTie,
+      });
+
+      res.json(win);
+    } catch (e) {
+      res.status(500).json({ error: "Failed to finalize weekly results" });
     }
   });
 

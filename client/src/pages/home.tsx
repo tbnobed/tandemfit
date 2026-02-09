@@ -20,6 +20,7 @@ import type {
   MotivationMessage,
   WorkoutLog,
   AiWorkoutPlan,
+  WeeklyWin,
 } from "@shared/schema";
 
 export default function Home() {
@@ -59,6 +60,14 @@ export default function Home() {
 
   const { data: workoutLogs = [], isLoading: logsLoading } = useQuery<WorkoutLog[]>({
     queryKey: ["/api/workout-logs"],
+  });
+
+  const { data: weeklyPoints } = useQuery<{ weekStart: string; results: { partnerId: string; partnerName: string; partnerColor: string; totalPoints: number; workoutCount: number }[] }>({
+    queryKey: ["/api/weekly-points"],
+  });
+
+  const { data: weeklyWins = [] } = useQuery<WeeklyWin[]>({
+    queryKey: ["/api/weekly-wins"],
   });
 
   useEffect(() => {
@@ -101,6 +110,7 @@ export default function Home() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/workout-logs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/partners"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/weekly-points"] });
       toast({ title: "Workout logged!" });
     },
     onError: () => {
@@ -114,6 +124,7 @@ export default function Home() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/workout-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/weekly-points"] });
       toast({ title: "Workout updated!" });
     },
     onError: () => {
@@ -128,6 +139,7 @@ export default function Home() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/workout-logs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/partners"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/weekly-points"] });
       toast({ title: "Workout deleted" });
     },
     onError: () => {
@@ -320,6 +332,8 @@ export default function Home() {
             challenges={challenges}
             messages={messages}
             workoutLogs={workoutLogs}
+            weeklyPoints={weeklyPoints}
+            weeklyWins={weeklyWins}
             onSendMessage={(msg) => sendMessageMutation.mutate(msg)}
             onUpdateGoals={(partnerId, weeklyGoal, calorieGoal) => updateGoalsMutation.mutate({ partnerId, weeklyGoal, calorieGoal })}
             isSending={sendMessageMutation.isPending}

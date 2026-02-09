@@ -9,9 +9,10 @@ import {
   type MotivationMessage, type InsertMotivationMessage,
   type AiWorkoutPlan, type InsertAiWorkoutPlan,
   type AiMealPlan, type InsertAiMealPlan,
-  partners, workoutLogs, activities, meals, mealPlans, challenges, badges, motivationMessages, aiWorkoutPlans, aiMealPlans
+  type WeeklyWin, type InsertWeeklyWin,
+  partners, workoutLogs, activities, meals, mealPlans, challenges, badges, motivationMessages, aiWorkoutPlans, aiMealPlans, weeklyWins
 } from "@shared/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, gte, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 
@@ -57,6 +58,9 @@ export interface IStorage {
   getAiMealPlans(): Promise<AiMealPlan[]>;
   createAiMealPlan(plan: InsertAiMealPlan): Promise<AiMealPlan>;
   deleteAiMealPlan(id: string): Promise<void>;
+
+  getWeeklyWins(): Promise<WeeklyWin[]>;
+  createWeeklyWin(win: InsertWeeklyWin): Promise<WeeklyWin>;
 }
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -227,6 +231,15 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAiMealPlan(id: string): Promise<void> {
     await db.delete(aiMealPlans).where(eq(aiMealPlans.id, id));
+  }
+
+  async getWeeklyWins(): Promise<WeeklyWin[]> {
+    return db.select().from(weeklyWins).orderBy(desc(weeklyWins.weekStart));
+  }
+
+  async createWeeklyWin(win: InsertWeeklyWin): Promise<WeeklyWin> {
+    const [created] = await db.insert(weeklyWins).values(win).returning();
+    return created;
   }
 }
 

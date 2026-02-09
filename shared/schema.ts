@@ -36,7 +36,18 @@ export const workoutLogs = pgTable("workout_logs", {
   activityName: text("activity_name").notNull(),
   duration: integer("duration").notNull(),
   caloriesBurned: integer("calories_burned").notNull(),
+  effortPoints: integer("effort_points").notNull().default(0),
   loggedAt: timestamp("logged_at").notNull().defaultNow(),
+});
+
+export const weeklyWins = pgTable("weekly_wins", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  weekStart: date("week_start").notNull(),
+  winnerId: varchar("winner_id"),
+  winnerPoints: integer("winner_points").notNull().default(0),
+  runnerUpPoints: integer("runner_up_points").notNull().default(0),
+  isTie: boolean("is_tie").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const activities = pgTable("activities", {
@@ -126,6 +137,7 @@ export const insertChallengeSchema = createInsertSchema(challenges).omit({ id: t
 export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true });
 export const insertAiMealPlanSchema = createInsertSchema(aiMealPlans).omit({ id: true });
 export const insertMotivationMessageSchema = createInsertSchema(motivationMessages).omit({ id: true });
+export const insertWeeklyWinSchema = createInsertSchema(weeklyWins).omit({ id: true });
 
 export type Partner = typeof partners.$inferSelect;
 export type InsertPartner = z.infer<typeof insertPartnerSchema>;
@@ -147,3 +159,5 @@ export type AiMealPlan = typeof aiMealPlans.$inferSelect;
 export type InsertAiMealPlan = z.infer<typeof insertAiMealPlanSchema>;
 export type MotivationMessage = typeof motivationMessages.$inferSelect;
 export type InsertMotivationMessage = z.infer<typeof insertMotivationMessageSchema>;
+export type WeeklyWin = typeof weeklyWins.$inferSelect;
+export type InsertWeeklyWin = z.infer<typeof insertWeeklyWinSchema>;

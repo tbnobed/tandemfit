@@ -1,10 +1,18 @@
-import { Heart, MessageCircle, Trophy, Zap, Target, Star, Send, Dumbbell, Clock, RotateCcw, Pencil, Check } from "lucide-react";
+import { Heart, MessageCircle, Trophy, Zap, Target, Star, Send, Dumbbell, Clock, RotateCcw, Pencil, Check, Crown, Swords, Award } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
-import type { Partner, Challenge, MotivationMessage, WorkoutLog } from "@shared/schema";
+import type { Partner, Challenge, MotivationMessage, WorkoutLog, WeeklyWin } from "@shared/schema";
+
+interface WeeklyPointsResult {
+  partnerId: string;
+  partnerName: string;
+  partnerColor: string;
+  totalPoints: number;
+  workoutCount: number;
+}
 
 interface DashboardTabProps {
   partners: Partner[];
@@ -12,6 +20,8 @@ interface DashboardTabProps {
   challenges: Challenge[];
   messages: MotivationMessage[];
   workoutLogs: WorkoutLog[];
+  weeklyPoints?: { weekStart: string; results: WeeklyPointsResult[] };
+  weeklyWins: WeeklyWin[];
   onSendMessage: (message: string) => void;
   onUpdateGoals: (partnerId: string, weeklyGoal: number, calorieGoal: number) => void;
   isSending: boolean;
@@ -66,6 +76,8 @@ export function DashboardTab({
   challenges,
   messages,
   workoutLogs,
+  weeklyPoints,
+  weeklyWins,
   onSendMessage,
   onUpdateGoals,
   isSending,
@@ -386,6 +398,125 @@ export function DashboardTab({
           );
         })}
       </div>
+
+      {weeklyPoints && weeklyPoints.results.length >= 2 && (
+        <Card>
+          <CardContent className="p-5">
+            <h3 className="font-bold text-base mb-4 flex items-center gap-2">
+              <Swords className="w-4 h-4 text-chart-3" />
+              Weekly Competition
+            </h3>
+            {(() => {
+              const [leader, runner] = weeklyPoints.results;
+              const totalPoints = leader.totalPoints + runner.totalPoints;
+              const leaderPct = totalPoints > 0 ? Math.round((leader.totalPoints / totalPoints) * 100) : 50;
+              const isLeaderBlue = leader.partnerColor === "blue";
+              const isTied = leader.totalPoints === runner.totalPoints;
+              const pointsDiff = leader.totalPoints - runner.totalPoints;
+
+              return (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${isLeaderBlue ? "bg-blue-500" : "bg-pink-500"}`}>
+                        {leader.partnerName[0]}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          {!isTied && leader.totalPoints > 0 && <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />}
+                          <p className="font-semibold text-sm truncate" data-testid={`text-leader-name`}>{leader.partnerName}</p>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{leader.workoutCount} workout{leader.workoutCount !== 1 ? "s" : ""}</p>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className={`text-2xl font-bold ${isLeaderBlue ? "text-blue-600 dark:text-blue-400" : "text-pink-600 dark:text-pink-400"}`} data-testid="text-leader-points">
+                        {leader.totalPoints.toLocaleString()}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">pts</p>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <div className="h-3 bg-muted rounded-full overflow-hidden flex">
+                      <div
+                        className={`h-full transition-all duration-700 ${isLeaderBlue ? "bg-gradient-to-r from-blue-500 to-blue-400" : "bg-gradient-to-r from-pink-500 to-pink-400"}`}
+                        style={{ width: totalPoints > 0 ? `${leaderPct}%` : "50%" }}
+                      />
+                      <div
+                        className={`h-full transition-all duration-700 ${!isLeaderBlue ? "bg-gradient-to-l from-blue-500 to-blue-400" : "bg-gradient-to-l from-pink-500 to-pink-400"}`}
+                        style={{ width: totalPoints > 0 ? `${100 - leaderPct}%` : "50%" }}
+                      />
+                    </div>
+                    {totalPoints > 0 && !isTied && (
+                      <p className="text-[10px] text-muted-foreground text-center mt-1">
+                        {leader.partnerName} leads by {pointsDiff.toLocaleString()} pts
+                      </p>
+                    )}
+                    {isTied && totalPoints > 0 && (
+                      <p className="text-[10px] text-muted-foreground text-center mt-1">It's a tie!</p>
+                    )}
+                    {totalPoints === 0 && (
+                      <p className="text-[10px] text-muted-foreground text-center mt-1">No workouts logged yet this week</p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${!isLeaderBlue ? "bg-blue-500" : "bg-pink-500"}`}>
+                        {runner.partnerName[0]}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm truncate" data-testid="text-runner-name">{runner.partnerName}</p>
+                        <p className="text-xs text-muted-foreground">{runner.workoutCount} workout{runner.workoutCount !== 1 ? "s" : ""}</p>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className={`text-2xl font-bold ${!isLeaderBlue ? "text-blue-600 dark:text-blue-400" : "text-pink-600 dark:text-pink-400"}`} data-testid="text-runner-points">
+                        {runner.totalPoints.toLocaleString()}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">pts</p>
+                    </div>
+                  </div>
+
+                  {weeklyWins.length > 0 && (
+                    <div className="border-t border-border pt-3 mt-3">
+                      <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                        <Award className="w-3.5 h-3.5" />
+                        Past Winners
+                      </p>
+                      <div className="space-y-1.5">
+                        {weeklyWins.slice(0, 4).map((win) => {
+                          const winner = partners.find(p => p.id === win.winnerId);
+                          const weekDate = new Date(win.weekStart + "T00:00:00");
+                          const weekLabel = weekDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                          return (
+                            <div key={win.id} className="flex items-center justify-between gap-2 text-xs p-2 bg-accent/40 rounded-md" data-testid={`weekly-win-${win.id}`}>
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-muted-foreground shrink-0">Wk of {weekLabel}</span>
+                                {win.isTie ? (
+                                  <span className="font-medium text-foreground">Tie</span>
+                                ) : (
+                                  <span className={`font-semibold ${winner?.color === "blue" ? "text-blue-600 dark:text-blue-400" : "text-pink-600 dark:text-pink-400"}`}>
+                                    {winner?.name || "Unknown"}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-muted-foreground shrink-0">
+                                {win.winnerPoints.toLocaleString()} - {win.runnerUpPoints.toLocaleString()}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="p-5">

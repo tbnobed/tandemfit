@@ -37,6 +37,7 @@ A couples fitness tracking app for Obed and Kristina with shared progress tracki
 - DELETE `/api/ai-meal-plans/:id` - Delete a saved AI recipe
 
 ## Recent Changes
+- 2026-02-09: Points reward system - effort points calculated from metabolic profile (weight-normalized calories × fitness level × age × duration), weekly competition with leaderboard bar, past winners history, weeklyWins table
 - 2026-02-09: Individualized activities - profile switcher in header (localStorage), per-partner workout history, Record Workout with MET-based calorie calculation, smart workout type detection
 - 2026-02-09: Rebranded to TandemFit with custom logo, favicon, apple-touch-icon
 - 2026-02-08: Added breakfast/lunch/dinner meal type support - weekly planner now shows 3 rows per day, dialog has meal type picker

@@ -160,7 +160,64 @@ export async function registerRoutes(
   app.get("/api/challenges", async (_req, res) => {
     try {
       const challenges = await storage.getChallenges();
-      res.json(challenges);
+      const workoutLogs = await storage.getWorkoutLogs();
+      const mealPlans = await storage.getMealPlans();
+      const partners = await storage.getPartners();
+
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      const enriched = challenges.map((c) => {
+        const nameLower = c.name.toLowerCase();
+
+        if (nameLower.includes("meal")) {
+          const completedMeals = mealPlans.filter((mp) => mp.completed).length;
+          const goal = c.goal || 10;
+          return { ...c, progress: Math.min(Math.round((completedMeals / goal) * 100), 100) };
+        }
+
+        if (nameLower.includes("monthly") || nameLower.includes("active day")) {
+          const partnerDays = partners.map((p) => {
+            const uniqueDays = new Set(
+              workoutLogs
+                .filter((l) => l.partnerId === p.id && new Date(l.loggedAt) >= startOfMonth)
+                .map((l) => new Date(l.loggedAt).toDateString())
+            );
+            return uniqueDays.size;
+          });
+          const avgDays = partnerDays.length > 0
+            ? partnerDays.reduce((a, b) => a + b, 0) / partnerDays.length
+            : 0;
+          const goal = 20;
+          return { ...c, progress: Math.min(Math.round((avgDays / goal) * 100), 100) };
+        }
+
+        if (nameLower.includes("couple") || nameLower.includes("7-day") || nameLower.includes("together")) {
+          const weekDays = [0, 1, 2, 3, 4, 5, 6];
+          let bothWorkedOut = 0;
+          for (const dayOffset of weekDays) {
+            const day = new Date(startOfWeek);
+            day.setDate(startOfWeek.getDate() + dayOffset);
+            if (day > now) break;
+            const dayStr = day.toDateString();
+            const allPartnersWorked = partners.every((p) =>
+              workoutLogs.some(
+                (l) => l.partnerId === p.id && new Date(l.loggedAt).toDateString() === dayStr
+              )
+            );
+            if (allPartnersWorked) bothWorkedOut++;
+          }
+          const daysPassed = Math.min(Math.floor((now.getTime() - startOfWeek.getTime()) / 86400000) + 1, 7);
+          return { ...c, progress: Math.min(Math.round((bothWorkedOut / daysPassed) * 100), 100) };
+        }
+
+        return c;
+      });
+
+      res.json(enriched);
     } catch (e) {
       res.status(500).json({ error: "Failed to fetch challenges" });
     }

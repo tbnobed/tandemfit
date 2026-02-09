@@ -295,6 +295,9 @@
   transition: transform 0.5s ease;
   transform-style: preserve-3d;
 }
+.flip-card-inner.flipped .flip-card-front {
+  visibility: hidden;
+}
 .flip-card-inner.flipped {
   transform: rotateY(180deg);
 }
@@ -303,8 +306,14 @@
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
+.flip-card-front {
+  position: relative;
+}
 .flip-card-back {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  min-height: 100%;
   transform: rotateY(180deg);
 }

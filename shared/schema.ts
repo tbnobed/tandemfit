@@ -48,6 +48,7 @@ export const activities = pgTable("activities", {
   calories: integer("calories").notNull(),
   difficulty: text("difficulty").notNull().default("Medium"),
   iconName: text("icon_name").notNull().default("Dumbbell"),
+  workoutType: text("workout_type").notNull().default("Other"),
   exercises: text("exercises"),
 });
 

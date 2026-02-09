@@ -3,7 +3,7 @@ import { Dumbbell, Heart, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { Partner } from "@shared/schema";
-import logoPath from "@assets/image_1770592476016.png";
+import logoPath from "../assets/logo.png";
 
 interface SplashScreenProps {
   partners: Partner[];

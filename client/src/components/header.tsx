@@ -1,7 +1,7 @@
 import { Flame, Check } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import type { Partner } from "@shared/schema";
-import logoPath from "@assets/image_1770592476016.png";
+import logoPath from "../assets/logo.png";
 
 interface HeaderProps {
   partners: Partner[];

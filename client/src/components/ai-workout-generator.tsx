@@ -69,6 +69,7 @@ export function AiWorkoutGenerator({ partners, activePartner }: AiWorkoutGenerat
     heightInches: "",
     weightLbs: "",
     fitnessLevel: "intermediate",
+    sex: "male",
     goal: "general fitness",
   });
 
@@ -132,6 +133,7 @@ export function AiWorkoutGenerator({ partners, activePartner }: AiWorkoutGenerat
         heightInches: selectedPartner.heightInches?.toString() || "",
         weightLbs: selectedPartner.weightLbs?.toString() || "",
         fitnessLevel: selectedPartner.fitnessLevel || "intermediate",
+        sex: selectedPartner.sex || "male",
         goal: selectedPartner.goal || "general fitness",
       });
       setShowProfileDialog(true);
@@ -148,6 +150,7 @@ export function AiWorkoutGenerator({ partners, activePartner }: AiWorkoutGenerat
         heightInches: profileForm.heightInches ? parseInt(profileForm.heightInches) : null,
         weightLbs: profileForm.weightLbs ? parseInt(profileForm.weightLbs) : null,
         fitnessLevel: profileForm.fitnessLevel,
+        sex: profileForm.sex,
         goal: profileForm.goal,
       },
     });
@@ -531,6 +534,18 @@ export function AiWorkoutGenerator({ partners, activePartner }: AiWorkoutGenerat
                   <SelectItem value="beginner">Beginner</SelectItem>
                   <SelectItem value="intermediate">Intermediate</SelectItem>
                   <SelectItem value="advanced">Advanced</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1 block">Sex</label>
+              <Select value={profileForm.sex} onValueChange={(val) => setProfileForm({ ...profileForm, sex: val })}>
+                <SelectTrigger data-testid="select-profile-sex">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
                 </SelectContent>
               </Select>
             </div>
